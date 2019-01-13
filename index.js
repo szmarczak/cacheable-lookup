@@ -34,7 +34,7 @@ class CacheableLookup {
 			options = {};
 		}
 
-		this.lookupAsync(hostname, options).then(result => {
+		this.lookupAsync(hostname, {...options, throwNotFound: true}).then(result => {
 			if (options.all) {
 				callback(null, result);
 			} else {
@@ -48,7 +48,7 @@ class CacheableLookup {
 
 		if (options.family !== 4 && options.family !== 6 && options.all) {
 			const [cached4, cached6] = await Promise.all([this.lookupAsync(hostname, {all: true, family: 4}), this.lookupAsync(hostname, {all: true, family: 6})]);
-			cached = [...(cached4 || []), ...(cached6 || [])];
+			cached = [...cached4, ...cached6];
 		} else {
 			cached = await this.query(hostname, options.family || 4);
 		}
@@ -89,12 +89,18 @@ class CacheableLookup {
 			cached = cached.filter(entry => entry.family === 6 ? has6 : has4);
 		}
 
-		if (cached.length === 0) {
-			return undefined;
+		if (options.throwNotFound && cached.length === 0) {
+			const error = new Error(`ENOTFOUND ${hostname}`);
+			error.code = 'ENOTFOUND';
+			error.hostname = hostname;
+
+			throw error;
 		}
 
 		if (options.all) {
 			return cached;
+		} else if (cached.length === 0) {
+			return undefined;
 		}
 
 		return this.getEntry(cached);

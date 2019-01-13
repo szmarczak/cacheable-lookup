@@ -1,4 +1,5 @@
 import {V4MAPPED, ADDRCONFIG} from 'dns';
+import {promisify} from 'util';
 import test from 'ava';
 import CacheableLookup from '.';
 
@@ -147,11 +148,19 @@ test('respects ttl', async t => {
 	]);
 });
 
-test('returns undefined if no match', async t => {
+test('`options.throwNotFound` is always `true` when using callback style', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	const entry = await cacheable.lookupAsync('static4', {family: 6});
-	t.is(entry, undefined);
+	const lookup = promisify(cacheable.lookup.bind(cacheable));
+
+	await t.throwsAsync(() => lookup('static4', {family: 6, throwNotFound: false}), {code: 'ENOTFOUND'});
+});
+
+test('options.throwNotFound', async t => {
+	const cacheable = new CacheableLookup({resolver});
+
+	await t.notThrowsAsync(() => cacheable.lookupAsync('static4', {family: 6, throwNotFound: false}));
+	await t.throwsAsync(() => cacheable.lookupAsync('static4', {family: 6, throwNotFound: true}), {code: 'ENOTFOUND'});
 });
 
 test('passes errors', async t => {
