@@ -281,19 +281,19 @@ test('passes errors', async t => {
 test('custom servers', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	// .getServers()
-	t.deepEqual(cacheable.getServers(), ['127.0.0.1']);
+	// .servers (get)
+	t.deepEqual(cacheable.servers, ['127.0.0.1']);
 	t.is(await cacheable.lookupAsync('unique'), undefined);
 
-	// .setServers()
-	cacheable.setServers(['127.0.0.1', '192.168.0.100']);
+	// .servers (set)
+	cacheable.servers = ['127.0.0.1', '192.168.0.100'];
 	t.deepEqual(await cacheable.lookupAsync('unique'), {
 		address: '127.0.0.1',
 		family: 4
 	});
 
 	// Verify
-	t.deepEqual(cacheable.getServers(), ['127.0.0.1', '192.168.0.100']);
+	t.deepEqual(cacheable.servers, ['127.0.0.1', '192.168.0.100']);
 });
 
 test('callback style', async t => {

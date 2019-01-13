@@ -13,18 +13,18 @@ class CacheableLookup {
 			namespace: 'cached-lookup'
 		});
 
-		this.maxTtl = options.maxTtl === 0 ? 0.001 : (options.maxTtl || Infinity);
+		this.maxTtl = options.maxTtl !== 0 ? (options.maxTtl || Infinity) : 0;
 
 		this.resolver = options.resolver || new Resolver();
 		this.resolve4 = promisify(this.resolver.resolve4.bind(this.resolver));
 		this.resolve6 = promisify(this.resolver.resolve6.bind(this.resolver));
 	}
 
-	setServers(servers) {
+	set servers(servers) {
 		this.resolver.setServers(servers);
 	}
 
-	getServers() {
+	get servers() {
 		return this.resolver.getServers();
 	}
 
@@ -132,8 +132,10 @@ class CacheableLookup {
 			delete entry.ttl;
 		}
 		ttl = Math.min(this.maxTtl, ttl) * 1000;
-
-		await this.cache.set(`${hostname}:${family}`, entries, ttl);
+ 
+		if (this.maxTtl !== 0) {
+			await this.cache.set(`${hostname}:${family}`, entries, ttl);
+		}
 
 		return entries;
 	}
