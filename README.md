@@ -36,14 +36,14 @@ Options used to cache the DNS lookups.
 
 ##### options.cacheAdapter
 
-A [Keyv adapter](https://github.com/lukechilds/keyv) where is stored the cache.
+A [Keyv adapter](https://github.com/lukechilds/keyv) which stores the cache.
 
 ##### options.maxTtl
 
 Type: `number`<br>
 Default: `Infinity`
 
-Limits the TTL. If set to `0` it'll make a new query each time.
+Limits the TTL. If set to `0` it'll make a new DNS query each time.
 
 ##### options.resolver
 
@@ -55,7 +55,7 @@ An instance of [DNS Resolver](https://nodejs.org/api/dns.html#dns_class_dns_reso
 
 DNS servers used to make the query. Can be overriden - then the new servers will be used.
 
-#### [lookup](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback)
+#### [lookup(hostname, options, callback)](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback)
 
 #### lookupAsync(hostname, options)
 
