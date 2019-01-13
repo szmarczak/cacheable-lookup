@@ -1,6 +1,6 @@
 'use strict';
 const {Resolver, V4MAPPED, ADDRCONFIG} = require('dns');
-const util = require('util');
+const {promisify} = require('util');
 const os = require('os');
 const Keyv = require('keyv');
 
@@ -16,8 +16,8 @@ class CacheableLookup {
 		this.maxTtl = options.maxTtl === 0 ? 0.001 : (options.maxTtl || Infinity);
 
 		this.resolver = options.resolver || new Resolver();
-		this.resolve4 = util.promisify(this.resolver.resolve4.bind(this.resolver));
-		this.resolve6 = util.promisify(this.resolver.resolve6.bind(this.resolver));
+		this.resolve4 = promisify(this.resolver.resolve4.bind(this.resolver));
+		this.resolve6 = promisify(this.resolver.resolve6.bind(this.resolver));
 	}
 
 	setServers(servers) {
