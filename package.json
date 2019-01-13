@@ -26,6 +26,7 @@
     "ava": "^1.0.1",
     "coveralls": "^3.0.2",
     "nyc": "^13.1.0",
+    "proxyquire": "^2.1.0",
     "xo": "^0.23.0"
   },
   "dependencies": {

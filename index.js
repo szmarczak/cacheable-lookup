@@ -13,7 +13,7 @@ class CacheableLookup {
 			namespace: 'cached-lookup'
 		});
 
-		this.maxTtl = options.maxTtl === 0 ? 1 : (options.maxTtl || Infinity);
+		this.maxTtl = options.maxTtl === 0 ? 0.001 : (options.maxTtl || Infinity);
 
 		this.resolver = options.resolver || new Resolver();
 		this.resolve4 = util.promisify(this.resolver.resolve4.bind(this.resolver));
@@ -66,12 +66,12 @@ class CacheableLookup {
 			let has4 = false;
 			let has6 = false;
 
-			for (const device of os.networkInterfaces()) {
-				if (device.internal) {
-					continue;
-				}
-
+			for (const device of Object.values(os.networkInterfaces())) {
 				for (const iface of device) {
+					if (iface.internal) {
+						continue;
+					}
+
 					if (iface.family === 'IPv4') {
 						has4 = true;
 					}
@@ -99,7 +99,9 @@ class CacheableLookup {
 
 		if (options.all) {
 			return cached;
-		} else if (cached.length === 0) {
+		}
+
+		if (cached.length === 0) {
 			return undefined;
 		}
 
@@ -119,7 +121,7 @@ class CacheableLookup {
 		const resolve = family === 6 ? this.resolve6 : this.resolve4;
 		const entries = await resolve(hostname, {ttl: true});
 
-		if (entries.length === 0) {
+		if (entries === undefined) {
 			return [];
 		}
 
