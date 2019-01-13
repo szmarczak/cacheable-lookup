@@ -54,7 +54,7 @@ const resolver = {
 		return [...resolver.servers];
 	},
 	setServers(servers) {
-		resolver.servers = servers;
+		resolver.servers = [...servers];
 	},
 	resolve: (hostname, options, callback) => {
 		if (hostname === 'undefined') {
