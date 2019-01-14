@@ -45,7 +45,7 @@ Default: `Infinity`
 
 Limits the cache time (TTL).
 
-If set to `0`, it willl make a new DNS query each time.
+If set to `0`, it will make a new DNS query each time.
 
 ##### options.resolver
 
