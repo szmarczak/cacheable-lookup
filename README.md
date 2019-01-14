@@ -1,6 +1,6 @@
 # cacheable-lookup
 
-> Cacheable [`dns.lookup(...)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) which respects the TTL :tada:
+> Cacheable [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) which respects the TTL :tada:
 
 [![Build Status](https://travis-ci.org/szmarczak/cacheable-lookup.svg?branch=master)](https://travis-ci.org/szmarczak/cacheable-lookup)
 [![Coverage Status](https://coveralls.io/repos/github/szmarczak/cacheable-lookup/badge.svg?branch=master)](https://coveralls.io/github/szmarczak/cacheable-lookup?branch=master)
@@ -29,7 +29,7 @@ Returns a new instance of `CacheableLookup`.
 
 #### options
 
-Type: `object`<br>
+Type: `Object`<br>
 Default: `{}`
 
 Options used to cache the DNS lookups.
@@ -43,9 +43,14 @@ A [Keyv adapter](https://github.com/lukechilds/keyv) which stores the cache.
 Type: `number`<br>
 Default: `Infinity`
 
-Limits the TTL. If set to `0` it'll make a new DNS query each time.
+Limits the cache time (TTL).
+
+If set to `0`, it willl make a new DNS query each time.
 
 ##### options.resolver
+
+Type: `Function`<br>
+Default: [`new dns.Resolver()`](https://nodejs.org/api/dns.html#dns_class_dns_resolver)
 
 An instance of [DNS Resolver](https://nodejs.org/api/dns.html#dns_class_dns_resolver) used to make DNS queries.
 
@@ -59,7 +64,7 @@ DNS servers used to make the query. Can be overriden - then the new servers will
 
 #### lookupAsync(hostname, options)
 
-The asynchronous version of `dns.lookup(...)`.
+The asynchronous version of `dns.lookup(…)`.
 
 ##### hostname
 
@@ -67,16 +72,18 @@ Type: `string`
 
 ##### options
 
-Type: `object`
+Type: `Object`
 
-The same as [`dns.lookup(...)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) options.
+The same as the [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) options.
 
 ##### options.throwNotFound
 
 Type: `boolean`<br>
 Default: `false`
 
-States if it should throw when there's no match. If set to `false` and got no match, it will return `undefined`.
+Throw when there's no match.
+
+If set to `false` and it gets no match, it will return `undefined`.
 
 **Note**: This option is meant **only** for the asynchronous implementation! The synchronous version will always throw an error if no match found.
 
@@ -96,7 +103,7 @@ Returns an array of objects with `address` and `family` properties.
 
 #### getEntry(entries)
 
-Selects one entry of many.
+Returns a random entry from the given `entries`.
 
 ##### entries
 
