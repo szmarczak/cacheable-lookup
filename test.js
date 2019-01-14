@@ -4,6 +4,8 @@ import test from 'ava';
 import proxyquire from 'proxyquire';
 import CacheableLookup from '.';
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 const mockedInterfaces = (options = {}) => {
 	const interfaces = {
 		lo: [
@@ -44,75 +46,77 @@ const mockedInterfaces = (options = {}) => {
 	});
 };
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const createResolver = () => {
+	const resolver = {
+		servers: ['127.0.0.1'],
+		getServers() {
+			return [...resolver.servers];
+		},
+		setServers(servers) {
+			resolver.servers = [...servers];
+		},
+		resolve: (hostname, options, callback) => {
+			if (hostname === 'undefined') {
+				callback(new Error('no entry'));
+				return;
+			}
 
-class HostnameDoesntExistError extends Error {}
+			let data;
+			for (const server of resolver.servers) {
+				if (resolver.data[server][hostname]) {
+					data = resolver.data[server][hostname];
+					break;
+				}
+			}
 
-const resolver = {
-	servers: ['127.0.0.1'],
-	getServers() {
-		return [...resolver.servers];
-	},
-	setServers(servers) {
-		resolver.servers = [...servers];
-	},
-	resolve: (hostname, options, callback) => {
-		if (hostname === 'undefined') {
-			callback(new HostnameDoesntExistError());
-			return;
-		}
+			if (!data) {
+				callback(null, undefined);
+				return;
+			}
 
-		let data;
-		for (const server of resolver.servers) {
-			if (resolver.data[server][hostname]) {
-				data = resolver.data[server][hostname];
-				break;
+			if (options.family === 4 || options.family === 6) {
+				data = data.filter(entry => entry.family === options.family);
+			}
+
+			callback(null, JSON.parse(JSON.stringify(data)));
+		},
+		resolve4: (hostname, options, callback) => {
+			return resolver.resolve(hostname, {...options, family: 4}, callback);
+		},
+		resolve6: (hostname, options, callback) => {
+			return resolver.resolve(hostname, {...options, family: 6}, callback);
+		},
+		data: {
+			'127.0.0.1': {
+				localhost: [
+					{address: '127.0.0.1', family: 4, ttl: 60},
+					{address: '::ffff:127.0.0.2', family: 6, ttl: 60}
+				],
+				temporary: [
+					{address: '127.0.0.1', family: 4, ttl: 1}
+				],
+				ttl: [
+					{address: '127.0.0.1', family: 4, ttl: 1}
+				],
+				maxTtl: [
+					{address: '127.0.0.1', family: 4, ttl: 60}
+				],
+				static4: [
+					{address: '127.0.0.1', family: 4, ttl: 1}
+				]
+			},
+			'192.168.0.100': {
+				unique: [
+					{address: '127.0.0.1', family: 4, ttl: 60}
+				]
 			}
 		}
+	};
 
-		if (!data) {
-			callback(null, undefined);
-			return;
-		}
-
-		if (options.family === 4 || options.family === 6) {
-			data = data.filter(entry => entry.family === options.family);
-		}
-
-		callback(null, JSON.parse(JSON.stringify(data)));
-	},
-	resolve4: (hostname, options, callback) => {
-		return resolver.resolve(hostname, {...options, family: 4}, callback);
-	},
-	resolve6: (hostname, options, callback) => {
-		return resolver.resolve(hostname, {...options, family: 6}, callback);
-	},
-	data: {
-		'127.0.0.1': {
-			localhost: [
-				{address: '127.0.0.1', family: 4, ttl: 60},
-				{address: '::ffff:127.0.0.2', family: 6, ttl: 60}
-			],
-			temporary: [
-				{address: '127.0.0.1', family: 4, ttl: 1}
-			],
-			ttl: [
-				{address: '127.0.0.1', family: 4, ttl: 1}
-			],
-			maxTtl: [
-				{address: '127.0.0.1', family: 4, ttl: 60}
-			],
-			static4: [
-				{address: '127.0.0.1', family: 4, ttl: 1}
-			]
-		},
-		'192.168.0.100': {
-			unique: [
-				{address: '127.0.0.1', family: 4, ttl: 60}
-			]
-		}
-	}
+	return resolver;
 };
+
+const resolver = createResolver();
 
 test('if `options.all` is falsy, then `options.family` is 4 when not defined', async t => {
 	const cacheable = new CacheableLookup({resolver});
@@ -129,13 +133,17 @@ test('options.family', async t => {
 
 	// IPv4
 	let entry = await cacheable.lookupAsync('localhost', {family: 4});
-	t.is(entry.address, '127.0.0.1');
-	t.is(entry.family, 4);
+	t.deepEqual(entry, {
+		address: '127.0.0.1',
+		family: 4
+	});
 
 	// IPv6
 	entry = await cacheable.lookupAsync('localhost', {family: 6});
-	t.is(entry.address, '::ffff:127.0.0.2');
-	t.is(entry.family, 6);
+	t.deepEqual(entry, {
+		address: '::ffff:127.0.0.2',
+		family: 6
+	});
 });
 
 test('options.all', async t => {
@@ -275,11 +283,11 @@ test('options.throwNotFound', async t => {
 test('passes errors', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	await t.throwsAsync(() => cacheable.lookupAsync('undefined'), HostnameDoesntExistError);
+	await t.throwsAsync(() => cacheable.lookupAsync('undefined'), 'no entry');
 });
 
 test('custom servers', async t => {
-	const cacheable = new CacheableLookup({resolver});
+	const cacheable = new CacheableLookup({resolver: createResolver()});
 
 	// .servers (get)
 	t.deepEqual(cacheable.servers, ['127.0.0.1']);
@@ -377,4 +385,14 @@ test('options.maxTtl', async t => {
 			family: 4
 		});
 	}
+});
+
+test('options.details', async t => {
+	const cacheable = new CacheableLookup({resolver});
+	const detailed = await cacheable.lookupAsync('localhost', {details: true});
+
+	t.is(detailed.address, '127.0.0.1');
+	t.is(detailed.family, 4);
+	t.true(typeof detailed.expires === 'number');
+	t.true(typeof detailed.ttl === 'number');
 });
