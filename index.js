@@ -104,7 +104,7 @@ class CacheableLookup {
 
 		const now = Date.now();
 
-		cached = cached.filter(entry => now < entry.expires || !entry.expires);
+		cached = cached.filter(entry => !Reflect.has(entry, 'expires') || now < entry.expires);
 
 		if (!options.details) {
 			cached = cached.map(entry => {
