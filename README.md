@@ -80,6 +80,13 @@ States if it should throw when there's no match. If set to `false` and got no ma
 
 **Note**: This option is meant **only** for the asynchronous implementation! The synchronous version will always throw an error if no match found.
 
+##### options.details
+
+Type: `boolean`<br>
+Default: `false`
+
+If `true` the entries will have additional `expires` and `ttl` properties representing the expiration timestamp and the original ttl.
+
 #### query(hostname, family)
 
 An asynchronous function which returns cached DNS lookup entries. This is the base for `lookupAsync(hostname, options)` and `lookup(hostname, options, callback)`.
@@ -93,10 +100,6 @@ Returns an array of objects with `address` and `family` properties.
 An asynchronous function which makes a new DNS lookup query and updates the database. This is used by `query(hostname, family)` if no entry in the database is present.
 
 Returns an array of objects with `address` and `family` properties.
-
-#### getEntry(entries)
-
-Selects one entry of many.
 
 ##### entries
 

@@ -4,6 +4,38 @@ const {promisify} = require('util');
 const os = require('os');
 const Keyv = require('keyv');
 
+const map4to6 = entries => {
+	for (const entry of entries) {
+		entry.address = `::ffff:${entry.address}`;
+		entry.family = 6;
+	}
+};
+
+const getIfaceInfo = () => {
+	let has4 = false;
+	let has6 = false;
+
+	for (const device of Object.values(os.networkInterfaces())) {
+		for (const iface of device) {
+			if (iface.internal) {
+				continue;
+			}
+
+			if (iface.family === 'IPv6') {
+				has6 = true;
+			} else {
+				has4 = true;
+			}
+
+			if (has4 && has6) {
+				break;
+			}
+		}
+	}
+
+	return {has4, has6};
+};
+
 class CacheableLookup {
 	constructor(options = {}) {
 		const {cacheAdapter} = options;
@@ -13,19 +45,19 @@ class CacheableLookup {
 			namespace: 'cached-lookup'
 		});
 
-		this.maxTtl = options.maxTtl !== 0 ? (options.maxTtl || Infinity) : 0;
+		this.maxTtl = options.maxTtl === 0 ? 0 : (options.maxTtl || Infinity);
 
-		this.resolver = options.resolver || new Resolver();
-		this.resolve4 = promisify(this.resolver.resolve4.bind(this.resolver));
-		this.resolve6 = promisify(this.resolver.resolve6.bind(this.resolver));
+		this._resolver = options.resolver || new Resolver();
+		this._resolve4 = promisify(this._resolver.resolve4.bind(this._resolver));
+		this._resolve6 = promisify(this._resolver.resolve6.bind(this._resolver));
 	}
 
 	set servers(servers) {
-		this.resolver.setServers(servers);
+		this._resolver.setServers(servers);
 	}
 
 	get servers() {
-		return this.resolver.getServers();
+		return this._resolver.getServers();
 	}
 
 	lookup(hostname, options, callback) {
@@ -45,47 +77,20 @@ class CacheableLookup {
 
 	async lookupAsync(hostname, options = {}) {
 		let cached;
-
-		if (options.family !== 4 && options.family !== 6 && options.all) {
-			const [cached4, cached6] = await Promise.all([this.lookupAsync(hostname, {all: true, family: 4}), this.lookupAsync(hostname, {all: true, family: 6})]);
+		if (!options.family && options.all) {
+			const [cached4, cached6] = await Promise.all([this.lookupAsync(hostname, {all: true, family: 4, details: true}), this.lookupAsync(hostname, {all: true, family: 6, details: true})]);
 			cached = [...cached4, ...cached6];
 		} else {
 			cached = await this.query(hostname, options.family || 4);
-		}
 
-		if (cached.length === 0 && options.family !== 4 && options.hints & V4MAPPED) {
-			cached = await this.query(hostname, 4);
-
-			for (const entry of cached) {
-				entry.address = `::ffff:${entry.address}`;
-				entry.family = 6;
+			if (cached.length === 0 && options.family === 6 && options.hints & V4MAPPED) {
+				cached = await this.query(hostname, 4);
+				map4to6(cached);
 			}
 		}
 
 		if (options.hints & ADDRCONFIG) {
-			let has4 = false;
-			let has6 = false;
-
-			for (const device of Object.values(os.networkInterfaces())) {
-				for (const iface of device) {
-					if (iface.internal) {
-						continue;
-					}
-
-					if (iface.family === 'IPv4') {
-						has4 = true;
-					}
-
-					if (iface.family === 'IPv6') {
-						has6 = true;
-					}
-
-					if (has4 && has6) {
-						break;
-					}
-				}
-			}
-
+			const {has4, has6} = getIfaceInfo();
 			cached = cached.filter(entry => entry.family === 6 ? has6 : has4);
 		}
 
@@ -97,6 +102,19 @@ class CacheableLookup {
 			throw error;
 		}
 
+		const now = Date.now();
+
+		cached = cached.filter(entry => now < entry.expires || !entry.expires);
+
+		if (!options.details) {
+			cached = cached.map(entry => {
+				return {
+					address: entry.address,
+					family: entry.family
+				};
+			});
+		}
+
 		if (options.all) {
 			return cached;
 		}
@@ -105,7 +123,7 @@ class CacheableLookup {
 			return undefined;
 		}
 
-		return this.getEntry(cached);
+		return this._getEntry(cached);
 	}
 
 	async query(hostname, family) {
@@ -118,29 +136,32 @@ class CacheableLookup {
 	}
 
 	async queryAndCache(hostname, family) {
-		const resolve = family === 6 ? this.resolve6 : this.resolve4;
+		const resolve = family === 4 ? this._resolve4 : this._resolve6;
 		const entries = await resolve(hostname, {ttl: true});
 
 		if (entries === undefined) {
 			return [];
 		}
 
-		let ttl = 0;
+		const now = Date.now();
+
+		let cacheTtl = 0;
 		for (const entry of entries) {
-			ttl = Math.max(ttl, entry.ttl);
+			cacheTtl = Math.max(cacheTtl, entry.ttl);
 			entry.family = family;
-			delete entry.ttl;
+			entry.expires = now + (entry.ttl * 1000);
 		}
-		ttl = Math.min(this.maxTtl, ttl) * 1000;
- 
+
+		cacheTtl = Math.min(this.maxTtl, cacheTtl) * 1000;
+
 		if (this.maxTtl !== 0) {
-			await this.cache.set(`${hostname}:${family}`, entries, ttl);
+			await this.cache.set(`${hostname}:${family}`, entries, cacheTtl);
 		}
 
 		return entries;
 	}
 
-	getEntry(entries) {
+	_getEntry(entries) {
 		return entries[Math.floor(Math.random() * entries.length)];
 	}
 }
