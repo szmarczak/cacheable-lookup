@@ -335,7 +335,7 @@ test('callback style', async t => {
 });
 
 test('works', async t => {
-	const cacheable = new CacheableLookup();
+	const cacheable = new CacheableLookup({resolver});
 
 	t.deepEqual(await cacheable.lookupAsync('localhost'), {
 		address: '127.0.0.1',
