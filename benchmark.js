@@ -5,7 +5,7 @@ const CacheableLookup = require('.');
 
 const cacheable = new CacheableLookup();
 const notCacheable = new CacheableLookup({maxTtl: 0});
-const suite = new Benchmark.Suite;
+const suite = new Benchmark.Suite();
 
 const options = {
 	defer: true,
@@ -24,8 +24,8 @@ suite.add('CacheableLookup#lookupAsync', deferred => {
 	dns.resolve4('localhost', {ttl: true}, () => deferred.resolve());
 }, options).add('dns#lookup', deferred => {
 	dns.lookup('localhost', {all: true}, () => deferred.resolve());
-}, options).on('cycle', function(event) {
+}, options).on('cycle', event => {
 	console.log(String(event.target));
-}).on('complete', function() {
+}).on('complete', function () {
 	console.log(`Fastest is ${this.filter('fastest').map('name')}`);
 }).run({async: true});
