@@ -148,7 +148,11 @@ dns#lookup                             x 5,994   ops/sec ±0.26%  (285 runs samp
 Fastest is CacheableLookup#lookup
 ```
 
-The package is based on [`dns.resolve4(…)`](https://nodejs.org/api/dns.html#dns_dns_resolve4_hostname_options_callback) and [`dns.resolve6(…)`](https://nodejs.org/api/dns.html#dns_dns_resolve6_hostname_options_callback), because `dns.lookup(…)` doesn't have the `ttl` option.
+The package is based on [`dns.resolve4(…)`](https://nodejs.org/api/dns.html#dns_dns_resolve4_hostname_options_callback) and [`dns.resolve6(…)`](https://nodejs.org/api/dns.html#dns_dns_resolve6_hostname_options_callback).
+
+[Why not `dns.lookup(…)`?](https://github.com/nodejs/node/issues/25560#issuecomment-455596215)
+
+> It is not possible to use `dns.lookup(…)` because underlying calls like [getaddrinfo](http://man7.org/linux/man-pages/man3/getaddrinfo.3.html) have no concept of servers or TTL (caching is done on OS level instead).
 
 ## Related
 
