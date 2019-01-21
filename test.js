@@ -445,3 +445,11 @@ test('.lookup() and .lookupAsync() are automatically bounded', async t => {
 	await t.notThrowsAsync(() => cacheable.lookupAsync('localhost'));
 	await t.notThrowsAsync(() => promisify(cacheable.lookup)('localhost'));
 });
+
+test('works (Internet connection)', async t => {
+	const cacheable = new CacheableLookup();
+
+	const {address, family} = await cacheable.lookupAsync('example.com');
+	t.true(typeof address === 'string');
+	t.is(family, 4);
+});
