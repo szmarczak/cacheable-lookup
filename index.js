@@ -173,3 +173,4 @@ class CacheableLookup {
 }
 
 module.exports = CacheableLookup;
+module.exports.default = CacheableLookup;

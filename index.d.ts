@@ -1,17 +1,16 @@
 import Keyv from "keyv";
-import dns from "dns";
+import {Resolver, LookupAddress} from "dns";
 
 type IPFamily = 4 | 6;
 
-interface Options {
+export interface Options {
 	/**
 	 * A Keyv adapter which stores the cache.
 	 * @default new Map()
 	 */
 	cacheAdapter?: Keyv;
 	/**
-	 * Limits the cache time (TTL).
-	 * If set to `0`, it will make a new DNS query each time.
+	 * Limits the cache time (TTL). If set to `0`, it will make a new DNS query each time.
 	 * @default Infinity
 	 */
 	maxTtl?: number;
@@ -19,103 +18,83 @@ interface Options {
 	 * DNS Resolver used to make DNS queries.
 	 * @default new dns.Resolver()
 	 */
-	resolver?: dns.Resolver;
+	resolver?: Resolver;
 }
 
 interface EntryObject {
 	/**
 	 * The IP address (can be an IPv4 or IPv5 address).
 	 */
-	address: string;
+	readonly address: string;
 	/**
 	 * The IP family.
 	 */
-	family: IPFamily;
+	readonly family: IPFamily;
+	/**
+	 * The original TTL.
+	 */
+	readonly ttl?: number;
+	/**
+	 * The expiration timestamp.
+	 */
+	readonly expires?: number;
 }
 
-interface LookupOptions extends dns.LookupOptions {
+interface LookupOptions {
 	/**
-	 * If `true` the entries returned by `lookup(…)` and `lookupAsync(…)`
-	 * will have additional `expires` and `ttl` properties representing
-	 * the expiration timestamp and the original TTL.
+	 * One or more supported getaddrinfo flags. Multiple flags may be passed by bitwise ORing their values.
+	 */
+	hints?: number;
+	/**
+	 * The record family. Must be 4 or 6. IPv4 and IPv6 addresses are both returned by default.
+	 */
+	family?: IPFamily;
+	/**
+	 * If `true` the entries returned by `lookup(…)` and `lookupAsync(…)` will have additional `expires` and `ttl` properties representing the expiration timestamp and the original TTL.
 	 * @default false
 	 */
 	details?: boolean;
-}
-
-interface AsyncLookupOptions extends LookupOptions {
 	/**
-	 * Throw when there's no match.
-	 * If set to `false` and it gets no match, it will return `undefined`.
+	 * When true, the callback returns all resolved addresses in an array. Otherwise, returns a single address.
+	 * @default false
+	 */
+	all?: boolean;
+	/**
+	 * Throw when there's no match. If set to `false` and it gets no match, it will return `undefined`.
 	 * @default false
 	 */
 	throwNotFound?: boolean;
 }
 
-interface CachedEntry {
-	address: string;
-	family: IPFamily;
-	ttl: number;
-	expires: number;
-}
-
-declare function lookup(
-	hostname: string,
-	family: IPFamily,
-	callback: (
-		err: NodeJS.ErrnoException,
-		address: string,
-		family: IPFamily
-	) => void
-): void;
-declare function lookup(
-	hostname: string,
-	options: LookupOptions,
-	callback: (
-		err: NodeJS.ErrnoException,
-		address: string | dns.LookupAddress[],
-		family?: IPFamily
-	) => void
-): void;
-declare function lookup(
-	hostname: string,
-	callback: (
-		err: NodeJS.ErrnoException,
-		address: string,
-		family: IPFamily
-	) => void
-): void;
-
-declare function lookupAsync(
-	hostname: string,
-	family: IPFamily
-): Promise<EntryObject>;
-declare function lookupAsync(
-	hostname: string,
-	options: AsyncLookupOptions
-): Promise<EntryObject>;
-declare function lookupAsync(hostname: string): Promise<EntryObject>;
-
 export default class CacheableLookup {
-	constructor(options: Options);
+	constructor(options?: Options);
 	/**
-	 * DNS servers used to make the query.
-	 * Can be overriden - then the new servers will be used.
+	 * DNS servers used to make the query. Can be overridden - then the new servers will be used.
 	 */
 	servers: string[];
 	/**
 	 * https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback
 	 */
-	lookup: typeof lookup;
+	lookup(hostname: string, family: IPFamily, callback: (err: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
+	lookup(hostname: string, callback: (err: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
+	lookup(hostname: string, options: LookupOptions & {all: true, details: true}, callback: (err: NodeJS.ErrnoException, result: ReadonlyArray<EntryObject & {ttl: number, expires: number}>) => void): void;
+	lookup(hostname: string, options: LookupOptions & {all: true}, callback: (err: NodeJS.ErrnoException, result: ReadonlyArray<EntryObject>) => void): void;
+	lookup(hostname: string, options: LookupOptions, callback: (err: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
 	/**
 	 * The asynchronous version of `dns.lookup(…)`.
 	 */
-	lookupAsync: typeof lookupAsync;
+	lookupAsync(hostname: string, options: LookupOptions & {all: true, details: true}): Promise<ReadonlyArray<EntryObject & {ttl: number, expires: number}>>; 
+	lookupAsync(hostname: string, options: LookupOptions & {all: true}): Promise<ReadonlyArray<EntryObject>>;
+	lookupAsync(hostname: string, options: LookupOptions & {details: true}): Promise<EntryObject & {ttl: number, expires: number}>;
+	lookupAsync(hostname: string, options: LookupOptions): Promise<EntryObject>;
+	lookupAsync(hostname: string): Promise<EntryObject>;
+	lookupAsync(hostname: string, family: IPFamily): Promise<EntryObject>;
 	/**
-	 * An asynchronous function which returns cached DNS lookup entries.
-	 * This is the base for `lookupAsync(hostname, options)`
-	 * and `lookup(hostname, options, callback)`.
+	 * An asynchronous function which returns cached DNS lookup entries. This is the base for `lookupAsync(hostname, options)` and `lookup(hostname, options, callback)`.
 	 */
-	query(hostname: string, family: IPFamily): Promise<CachedEntry[]>;
-	queryAndCache(hostname: string, family: IPFamily): Promise<CachedEntry[]>;
+	query(hostname: string, family: IPFamily): Promise<ReadonlyArray<EntryObject>>;
+	/**
+	 * An asynchronous function which makes a new DNS lookup query and updates the database. This is used by `query(hostname, family)` if no entry in the database is present. Returns an array of objects with `address`, `family`, `ttl` and `expires` properties.
+	 */
+	queryAndCache(hostname: string, family: IPFamily): Promise<ReadonlyArray<EntryObject>>;
 }
