@@ -76,10 +76,10 @@ export default class CacheableLookup {
 	 * @see https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback
 	 */
 	lookup(hostname: string, family: IPFamily, callback: (error: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
-	lookup(hostname: string, callback: (err: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
-	lookup(hostname: string, options: LookupOptions & {all: true, details: true}, callback: (err: NodeJS.ErrnoException, result: ReadonlyArray<EntryObject & {ttl: number, expires: number}>) => void): void;
-	lookup(hostname: string, options: LookupOptions & {all: true}, callback: (err: NodeJS.ErrnoException, result: ReadonlyArray<EntryObject>) => void): void;
-	lookup(hostname: string, options: LookupOptions, callback: (err: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
+	lookup(hostname: string, callback: (error: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
+	lookup(hostname: string, options: LookupOptions & {all: true, details: true}, callback: (error: NodeJS.ErrnoException, result: ReadonlyArray<EntryObject & {ttl: number, expires: number}>) => void): void;
+	lookup(hostname: string, options: LookupOptions & {all: true}, callback: (error: NodeJS.ErrnoException, result: ReadonlyArray<EntryObject>) => void): void;
+	lookup(hostname: string, options: LookupOptions, callback: (error: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
 	/**
 	 * The asynchronous version of `dns.lookup(…)`.
 	 */
