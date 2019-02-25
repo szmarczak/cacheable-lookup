@@ -73,7 +73,7 @@ export default class CacheableLookup {
 	 */
 	servers: string[];
 	/**
-	 * https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback
+	 * @see https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback
 	 */
 	lookup(hostname: string, family: IPFamily, callback: (error: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
 	lookup(hostname: string, callback: (err: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
