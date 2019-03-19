@@ -79,7 +79,7 @@ The IP family (`4` or `6`).
 
 Type: `Array`
 
-DNS servers used to make the query. Can be overriden - then the new servers will be used.
+DNS servers used to make the query. Can be overridden - then the new servers will be used.
 
 #### [lookup(hostname, options, callback)](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback)
 
