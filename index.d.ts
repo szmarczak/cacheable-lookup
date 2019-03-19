@@ -46,7 +46,7 @@ interface LookupOptions {
 	 */
 	hints?: number;
 	/**
-	 * The record family. Must be 4 or 6. IPv4 and IPv6 addresses are both returned by default.
+	 * The record family. Must be `4` or `6`. IPv4 and IPv6 addresses are both returned by default.
 	 */
 	family?: IPFamily;
 	/**
@@ -55,7 +55,7 @@ interface LookupOptions {
 	 */
 	details?: boolean;
 	/**
-	 * When true, the callback returns all resolved addresses in an array. Otherwise, returns a single address.
+	 * When `true`, the callback returns all resolved addresses in an array. Otherwise, returns a single address.
 	 * @default false
 	 */
 	all?: boolean;
