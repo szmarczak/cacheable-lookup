@@ -1,4 +1,4 @@
-import {expectType} from 'tsd-check';
+import {expectType} from 'tsd';
 import CacheableLookup, { EntryObject } from '.';
 
 const cacheable = new CacheableLookup();
