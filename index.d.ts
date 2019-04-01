@@ -1,4 +1,4 @@
-import Keyv from 'keyv';
+import * as  Keyv from 'keyv';
 import {Resolver, LookupAddress} from 'dns';
 
 type IPFamily = 4 | 6;

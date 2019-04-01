@@ -1,6 +1,6 @@
 {
   "name": "cacheable-lookup",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A cacheable dns.lookup(…) that respects the TTL",
   "files": [
     "index.js",
@@ -8,7 +8,7 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "xo && nyc ava && tsd-check"
+    "test": "xo && nyc ava && tsd"
   },
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
     "microtime": "^2.1.8",
     "nyc": "^13.1.0",
     "proxyquire": "^2.1.0",
-    "tsd-check": "^0.3.0",
+    "tsd": "^0.7.1",
     "xo": "^0.23.0"
   },
   "dependencies": {
