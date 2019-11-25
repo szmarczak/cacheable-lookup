@@ -111,7 +111,7 @@ Throw when there's no match.
 
 If set to `false` and it gets no match, it will return `undefined`.
 
-**Note**: This option is meant **only** for the asynchronous implementation! The synchronous version will always throw an error if no match found.
+**Note**: This option is meant **only** for the asynchronous implementation! The synchronous version will always give an error if no match found.
 
 ##### options.details
 
