@@ -1,6 +1,6 @@
 # cacheable-lookup
 
-> A cacheable [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) that respects the TTL :tada:
+> A cacheable [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) that respects TTL :tada:
 
 [![Build Status](https://travis-ci.org/szmarczak/cacheable-lookup.svg?branch=master)](https://travis-ci.org/szmarczak/cacheable-lookup)
 [![Coverage Status](https://coveralls.io/repos/github/szmarczak/cacheable-lookup/badge.svg?branch=master)](https://coveralls.io/github/szmarczak/cacheable-lookup?branch=master)
@@ -8,7 +8,7 @@
 [![install size](https://packagephobia.now.sh/badge?p=cacheable-lookup)](https://packagephobia.now.sh/result?p=cacheable-lookup)
 
 Making lots of HTTP requests? You can save some time by caching DNS lookups.<br>
-Don't worry, this package respects the TTL :smiley:
+Don't worry, this package respects TTL :smiley:
 
 ## Usage
 
