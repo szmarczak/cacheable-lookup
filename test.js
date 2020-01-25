@@ -1,9 +1,9 @@
-import {V4MAPPED, ADDRCONFIG} from 'dns';
-import {promisify} from 'util';
-import http from 'http';
-import test from 'ava';
-import proxyquire from 'proxyquire';
-import CacheableLookup from '.';
+const {V4MAPPED, ADDRCONFIG} = require('dns');
+const {promisify} = require('util');
+const http = require('http');
+const test = require('ava');
+const proxyquire = require('proxyquire');
+const CacheableLookup = require('.');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
