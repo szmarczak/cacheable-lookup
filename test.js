@@ -290,7 +290,7 @@ test('options.throwNotFound', async t => {
 test('passes errors', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	await t.throwsAsync(() => cacheable.lookupAsync('undefined'), 'no entry');
+	await t.throwsAsync(() => cacheable.lookupAsync('undefined'), {message: 'no entry'});
 });
 
 test('custom servers', async t => {
@@ -436,7 +436,7 @@ test('http example', async t => {
 		}).once('error', reject);
 	});
 
-	await t.throwsAsync(() => makeRequest(), 'connect ECONNREFUSED 127.0.0.127:8080');
+	await t.throwsAsync(() => makeRequest(), {message: 'connect ECONNREFUSED 127.0.0.127:8080'});
 });
 
 test('.lookup() and .lookupAsync() are automatically bounded', async t => {
