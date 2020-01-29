@@ -13,10 +13,12 @@ const options = {
 };
 
 suite.add('CacheableLookup#lookupAsync', deferred => {
+	// eslint-disable-next-line promise/prefer-await-to-then
 	cacheable.lookupAsync('localhost').then(() => deferred.resolve());
 }, options).add('CacheableLookup#lookup', deferred => {
 	cacheable.lookup('localhost', () => deferred.resolve());
 }, options).add('CacheableLookup#lookupAsync - zero TTL', deferred => {
+	// eslint-disable-next-line promise/prefer-await-to-then
 	notCacheable.lookupAsync('localhost').then(() => deferred.resolve());
 }, options).add('CacheableLookup#lookup - zero TTL', deferred => {
 	notCacheable.lookup('localhost', () => deferred.resolve());

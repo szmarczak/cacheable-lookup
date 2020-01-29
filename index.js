@@ -78,6 +78,7 @@ class CacheableLookup {
 			options = {};
 		}
 
+		// eslint-disable-next-line promise/prefer-await-to-then
 		this.lookupAsync(hostname, {...options, throwNotFound: true}).then(result => {
 			if (options.all) {
 				callback(null, result);
