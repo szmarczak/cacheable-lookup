@@ -281,20 +281,20 @@ test('`options.throwNotFound` is always `true` when using callback style', async
 
 	const lookup = promisify(cacheable.lookup.bind(cacheable));
 
-	await t.throwsAsync(() => lookup('static4', {family: 6, throwNotFound: false}), {code: 'ENOTFOUND'});
+	await t.throwsAsync(lookup('static4', {family: 6, throwNotFound: false}), {code: 'ENOTFOUND'});
 });
 
 test('options.throwNotFound', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	await t.notThrowsAsync(() => cacheable.lookupAsync('static4', {family: 6, throwNotFound: false}));
-	await t.throwsAsync(() => cacheable.lookupAsync('static4', {family: 6, throwNotFound: true}), {code: 'ENOTFOUND'});
+	await t.notThrowsAsync(cacheable.lookupAsync('static4', {family: 6, throwNotFound: false}));
+	await t.throwsAsync(cacheable.lookupAsync('static4', {family: 6, throwNotFound: true}), {code: 'ENOTFOUND'});
 });
 
 test('passes errors', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	await t.throwsAsync(() => cacheable.lookupAsync('undefined'), {message: 'no entry'});
+	await t.throwsAsync(cacheable.lookupAsync('undefined'), {message: 'no entry'});
 });
 
 test('custom servers', async t => {
@@ -436,18 +436,14 @@ test('http example', async t => {
 		lookup: cacheable.lookup
 	};
 
-<<<<<<< HEAD
-	await t.throwsAsync(() => makeRequest(), {message: 'connect ECONNREFUSED 127.0.0.127:8080'});
-=======
-	await t.throwsAsync(() => makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
->>>>>>> Make it possible to attach CacheableLookup to an Agent
+	await t.throwsAsync(makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
 });
 
 test('.lookup() and .lookupAsync() are automatically bounded', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	await t.notThrowsAsync(() => cacheable.lookupAsync('localhost'));
-	await t.notThrowsAsync(() => promisify(cacheable.lookup)('localhost'));
+	await t.notThrowsAsync(cacheable.lookupAsync('localhost'));
+	await t.notThrowsAsync(promisify(cacheable.lookup)('localhost'));
 });
 
 test('works (Internet connection)', async t => {
@@ -467,11 +463,11 @@ test.serial('install & uninstall', async t => {
 		port: 8080
 	};
 
-	await t.throwsAsync(() => makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
+	await t.throwsAsync(makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
 
 	cacheable.uninstall(http.globalAgent);
 
-	await t.throwsAsync(() => makeRequest(options), 'getaddrinfo ENOTFOUND example');
+	await t.throwsAsync(makeRequest(options), 'getaddrinfo ENOTFOUND example');
 });
 
 test('`.install()` throws if no Agent provided', t => {
@@ -518,7 +514,7 @@ test.serial('install - providing custom lookup function anyway', async t => {
 		lookup: b.lookup
 	};
 
-	await t.throwsAsync(() => makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
+	await t.throwsAsync(makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
 
 	a.uninstall(http.globalAgent);
 });
