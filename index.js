@@ -4,6 +4,15 @@ const {promisify} = require('util');
 const os = require('os');
 const Keyv = require('keyv');
 
+const kCacheableLookupData = Symbol('cacheableLookupData');
+const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
+
+const verifyAgent = agent => {
+	if (!(agent && typeof agent.createConnection === 'function')) {
+		throw new Error('Expected an Agent instance as the first argument');
+	}
+};
+
 const map4to6 = entries => {
 	for (const entry of entries) {
 		entry.address = `::ffff:${entry.address}`;
@@ -169,6 +178,40 @@ class CacheableLookup {
 
 	_getEntry(entries) {
 		return entries[Math.floor(Math.random() * entries.length)];
+	}
+
+	install(agent) {
+		verifyAgent(agent);
+
+		if (kCacheableLookupData in agent) {
+			throw new Error('CacheableLookup has been already installed');
+		}
+
+		agent[kCacheableLookupData] = agent.createConnection;
+		agent[kCacheableLookupInstance] = this;
+
+		agent.createConnection = (options, callback) => {
+			if (!('lookup' in options)) {
+				options.lookup = this.lookup;
+			}
+
+			return agent[kCacheableLookupData](options, callback);
+		};
+	}
+
+	uninstall(agent) {
+		verifyAgent(agent);
+
+		if (agent[kCacheableLookupData]) {
+			if (agent[kCacheableLookupInstance] !== this) {
+				throw new Error('The agent is not owned by this CacheableLookup instance');
+			}
+
+			agent.createConnection = agent[kCacheableLookupData];
+
+			delete agent[kCacheableLookupData];
+			delete agent[kCacheableLookupInstance];
+		}
 	}
 }
 

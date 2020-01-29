@@ -5,6 +5,10 @@ const test = require('ava');
 const proxyquire = require('proxyquire');
 const CacheableLookup = require('.');
 
+const makeRequest = options => new Promise((resolve, reject) => {
+	http.get(options, resolve).once('error', reject);
+});
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const mockedInterfaces = (options = {}) => {
@@ -426,17 +430,17 @@ test('entry with 0 ttl', async t => {
 test('http example', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	const makeRequest = () => new Promise((resolve, reject) => {
-		http.get({
-			hostname: 'example',
-			port: 8080,
-			lookup: cacheable.lookup
-		}, response => {
-			resolve(response);
-		}).once('error', reject);
-	});
+	const options = {
+		hostname: 'example',
+		port: 8080,
+		lookup: cacheable.lookup
+	};
 
+<<<<<<< HEAD
 	await t.throwsAsync(() => makeRequest(), {message: 'connect ECONNREFUSED 127.0.0.127:8080'});
+=======
+	await t.throwsAsync(() => makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
+>>>>>>> Make it possible to attach CacheableLookup to an Agent
 });
 
 test('.lookup() and .lookupAsync() are automatically bounded', async t => {
@@ -452,4 +456,80 @@ test('works (Internet connection)', async t => {
 	const {address, family} = await cacheable.lookupAsync('example.com');
 	t.true(typeof address === 'string');
 	t.is(family, 4);
+});
+
+test.serial('install & uninstall', async t => {
+	const cacheable = new CacheableLookup({resolver});
+	cacheable.install(http.globalAgent);
+
+	const options = {
+		hostname: 'example',
+		port: 8080
+	};
+
+	await t.throwsAsync(() => makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
+
+	cacheable.uninstall(http.globalAgent);
+
+	await t.throwsAsync(() => makeRequest(options), 'getaddrinfo ENOTFOUND example');
+});
+
+test('`.install()` throws if no Agent provided', t => {
+	const cacheable = new CacheableLookup();
+
+	t.throws(() => cacheable.install(), 'Expected an Agent instance as the first argument');
+	t.throws(() => cacheable.install(1), 'Expected an Agent instance as the first argument');
+});
+
+test('`.uninstall()` throws if no Agent provided', t => {
+	const cacheable = new CacheableLookup();
+
+	t.throws(() => cacheable.uninstall(), 'Expected an Agent instance as the first argument');
+	t.throws(() => cacheable.uninstall(1), 'Expected an Agent instance as the first argument');
+});
+
+test.serial('`.uninstall()` does not alter unmodified Agents', t => {
+	const cacheable = new CacheableLookup();
+	const {createConnection} = http.globalAgent;
+
+	cacheable.uninstall(http.globalAgent);
+
+	t.is(createConnection, http.globalAgent.createConnection);
+});
+
+test.serial('throws if double-installing CacheableLookup', t => {
+	const cacheable = new CacheableLookup();
+
+	cacheable.install(http.globalAgent);
+	t.throws(() => cacheable.install(http.globalAgent), 'CacheableLookup has been already installed');
+
+	cacheable.uninstall(http.globalAgent);
+});
+
+test.serial('install - providing custom lookup function anyway', async t => {
+	const a = new CacheableLookup();
+	const b = new CacheableLookup({resolver});
+
+	a.install(http.globalAgent);
+
+	const options = {
+		hostname: 'example',
+		port: 8080,
+		lookup: b.lookup
+	};
+
+	await t.throwsAsync(() => makeRequest(options), 'connect ECONNREFUSED 127.0.0.127:8080');
+
+	a.uninstall(http.globalAgent);
+});
+
+test.serial('throws when calling `.uninstall()` on the wrong instance', t => {
+	const a = new CacheableLookup();
+	const b = new CacheableLookup({resolver});
+
+	a.install(http.globalAgent);
+
+	t.throws(() => b.uninstall(http.globalAgent), 'The agent is not owned by this CacheableLookup instance');
+
+	a.uninstall(http.globalAgent);
 });

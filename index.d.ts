@@ -1,5 +1,6 @@
-import * as  Keyv from 'keyv';
+import Keyv = require('keyv');
 import {Resolver, LookupAddress} from 'dns';
+import {Agent} from 'http';
 
 type IPFamily = 4 | 6;
 
@@ -83,7 +84,7 @@ export default class CacheableLookup {
 	/**
 	 * The asynchronous version of `dns.lookup(…)`.
 	 */
-	lookupAsync(hostname: string, options: LookupOptions & {all: true, details: true}): Promise<ReadonlyArray<EntryObject & {ttl: number, expires: number}>>; 
+	lookupAsync(hostname: string, options: LookupOptions & {all: true, details: true}): Promise<ReadonlyArray<EntryObject & {ttl: number, expires: number}>>;
 	lookupAsync(hostname: string, options: LookupOptions & {all: true}): Promise<ReadonlyArray<EntryObject>>;
 	lookupAsync(hostname: string, options: LookupOptions & {details: true}): Promise<EntryObject & {ttl: number, expires: number}>;
 	lookupAsync(hostname: string, options: LookupOptions): Promise<EntryObject>;
@@ -97,4 +98,12 @@ export default class CacheableLookup {
 	 * An asynchronous function which makes a new DNS lookup query and updates the database. This is used by `query(hostname, family)` if no entry in the database is present. Returns an array of objects with `address`, `family`, `ttl` and `expires` properties.
 	 */
 	queryAndCache(hostname: string, family: IPFamily): Promise<ReadonlyArray<EntryObject>>;
+	/**
+	 * Attaches itself to an Agent instance.
+	 */
+	install(agent: Agent): void;
+	/**
+	 * Removes itself from an Agent instance.
+	 */
+	uninstall(agent: Agent): void;
 }
