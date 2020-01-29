@@ -12,11 +12,28 @@ Don't worry, this package respects TTL :smiley:
 
 ## Usage
 
+### Using the `lookup` option
+
 ```js
+const http = require('http');
 const CacheableLookup = require('cacheable-lookup');
 const cacheable = new CacheableLookup();
 
 http.get('https://example.com', {lookup: cacheable.lookup}, response => {
+	// Handle the response here
+});
+```
+
+### Attaching CacheableLookup to an Agent
+
+```js
+const http = require('http');
+const CacheableLookup = require('cacheable-lookup');
+const cacheable = new CacheableLookup();
+
+cacheable.install(http.globalAgent);
+
+http.get('https://example.com', response => {
 	// Handle the response here
 });
 ```
