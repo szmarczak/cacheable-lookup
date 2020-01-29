@@ -7,8 +7,7 @@
 [![npm](https://img.shields.io/npm/dm/cacheable-lookup.svg)](https://www.npmjs.com/package/cacheable-lookup)
 [![install size](https://packagephobia.now.sh/badge?p=cacheable-lookup)](https://packagephobia.now.sh/result?p=cacheable-lookup)
 
-Making lots of HTTP requests? You can save some time by caching DNS lookups.<br>
-Don't worry, this package respects TTL :smiley:
+Making lots of HTTP requests? You can save some time by caching DNS lookups :zap:
 
 ## Usage
 
