@@ -62,7 +62,7 @@ A Keyv adapter which stores the cache.
 Type: `number`<br>
 Default: `Infinity`
 
-Limits the cache time (TTL).
+Limits the cache time (TTL in seconds).
 
 If set to `0`, it will make a new DNS query each time.
 
@@ -88,6 +88,25 @@ The IP address (can be an IPv4 or IPv6 address).
 Type: `number`
 
 The IP family (`4` or `6`).
+
+##### expires
+
+Type: `number`
+
+**Note**: This is not present when using the native `dns.lookup(...)`!
+
+The timestamp (`Date.now() + ttl * 1000`) when the entry expires.
+
+#### ttl
+
+**Note**: This is not present when using the native `dns.lookup(...)`!
+
+The time in seconds for its lifetime.
+
+### Entry object (callback-style)
+
+When `options.all` is `false`, then `callback(error, address, family, expires, ttl)` is called. <br>
+When `options.all` is `true`, then `callback(error, entries)` is called.
 
 ### CacheableLookup instance
 
@@ -129,13 +148,6 @@ If set to `false` and it gets no match, it will return `undefined`.
 
 **Note**: This option is meant **only** for the asynchronous implementation! The synchronous version will always give an error if no match found.
 
-##### options.details
-
-Type: `boolean`<br>
-Default: `false`
-
-If `true` the entries returned by `lookup(…)` and `lookupAsync(…)` will have additional `expires` and `ttl` properties representing the expiration timestamp and the original TTL.
-
 #### query(hostname, family)
 
 An asynchronous function which returns cached DNS lookup entries. This is the base for `lookupAsync(hostname, options)` and `lookup(hostname, options, callback)`.
@@ -150,18 +162,28 @@ An asynchronous function which makes a new DNS lookup query and updates the data
 
 Returns an array of objects with `address`, `family`, `ttl` and `expires` properties.
 
+#### updateInterfaceInfo()
+
+Updates interface info. For example, you need to run this when you plug or unplug your WiFi driver.
+
 ## High performance
 
 See the benchmarks (queries `localhost`, performed on i7-7700k):
 
 ```
-CacheableLookup#lookupAsync            x 219,396 ops/sec ±0.69%  (285 runs sampled)
-CacheableLookup#lookup                 x 219,296 ops/sec ±0.20%  (284 runs sampled)
-CacheableLookup#lookupAsync - zero TTL x 27.67   ops/sec ±51.06% (246 runs sampled)
-CacheableLookup#lookup      - zero TTL x 29.64   ops/sec ±49.60% (204 runs sampled)
-dns#resolve4                           x 27.03   ops/sec ±41.64% (246 runs sampled)
-dns#lookup                             x 5,994   ops/sec ±0.26%  (285 runs sampled)
-Fastest is CacheableLookup#lookup
+CacheableLookup#lookupAsync                x 265,390 ops/sec ±0.65%  (89 runs sampled)
+CacheableLookup#lookupAsync.all            x 119,187 ops/sec ±2.57%  (87 runs sampled)
+CacheableLookup#lookupAsync.all.ADDRCONFIG x 119,666 ops/sec ±0.75%  (89 runs sampled)
+CacheableLookup#lookup                     x 116,604 ops/sec ±0.68%  (88 runs sampled)
+CacheableLookup#lookup.all                 x 115,627 ops/sec ±0.72%  (89 runs sampled)
+CacheableLookup#lookup.all.ADDRCONFIG      x 115,578 ops/sec ±0.90%  (88 runs sampled)
+CacheableLookup#lookupAsync - zero TTL     x 60.83   ops/sec ±7.43%  (51 runs sampled)
+CacheableLookup#lookup      - zero TTL     x 49.22   ops/sec ±20.58% (49 runs sampled)
+dns#resolve4                               x 63.00   ops/sec ±5.88%  (51 runs sampled)
+dns#lookup                                 x 21,303  ops/sec ±29.06% (35 runs sampled)
+dns#lookup.all                             x 22,283  ops/sec ±21.96% (38 runs sampled)
+dns#lookup.all.ADDRCONFIG                  x 5,922   ops/sec ±10.18% (38 runs sampled)
+Fastest is CacheableLookup#lookupAsync
 ```
 
 The package is based on [`dns.resolve4(…)`](https://nodejs.org/api/dns.html#dns_dns_resolve4_hostname_options_callback) and [`dns.resolve6(…)`](https://nodejs.org/api/dns.html#dns_dns_resolve6_hostname_options_callback).

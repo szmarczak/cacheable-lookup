@@ -46,19 +46,20 @@ const getIfaceInfo = () => {
 };
 
 class CacheableLookup {
-	constructor(options = {}) {
-		const {cacheAdapter} = options;
+	constructor({cacheAdapter, maxTtl = Infinity, resolver} = {}) {
 		this.cache = new Keyv({
 			uri: typeof cacheAdapter === 'string' && cacheAdapter,
 			store: typeof cacheAdapter !== 'string' && cacheAdapter,
 			namespace: 'cached-lookup'
 		});
 
-		this.maxTtl = options.maxTtl === 0 ? 0 : (options.maxTtl || Infinity);
+		this.maxTtl = maxTtl;
 
-		this._resolver = options.resolver || new Resolver();
+		this._resolver = resolver || new Resolver();
 		this._resolve4 = promisify(this._resolver.resolve4.bind(this._resolver));
 		this._resolve6 = promisify(this._resolver.resolve6.bind(this._resolver));
+
+		this._iface = getIfaceInfo();
 
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
@@ -83,7 +84,7 @@ class CacheableLookup {
 			if (options.all) {
 				callback(null, result);
 			} else {
-				callback(null, result.address, result.family);
+				callback(null, result.address, result.family, result.expires, result.ttl);
 			}
 		}).catch(callback);
 	}
@@ -91,7 +92,7 @@ class CacheableLookup {
 	async lookupAsync(hostname, options = {}) {
 		let cached;
 		if (!options.family && options.all) {
-			const [cached4, cached6] = await Promise.all([this.lookupAsync(hostname, {all: true, family: 4, details: true}), this.lookupAsync(hostname, {all: true, family: 6, details: true})]);
+			const [cached4, cached6] = await Promise.all([this.lookupAsync(hostname, {all: true, family: 4}), this.lookupAsync(hostname, {all: true, family: 6})]);
 			cached = [...cached4, ...cached6];
 		} else {
 			cached = await this.query(hostname, options.family || 4);
@@ -103,11 +104,11 @@ class CacheableLookup {
 		}
 
 		if (options.hints & ADDRCONFIG) {
-			const {has4, has6} = getIfaceInfo();
-			cached = cached.filter(entry => entry.family === 6 ? has6 : has4);
+			const {_iface} = this;
+			cached = cached.filter(entry => entry.family === 6 ? _iface.has6 : _iface.has4);
 		}
 
-		if (options.throwNotFound && cached.length === 0) {
+		if (cached.length === 0 && options.throwNotFound) {
 			const error = new Error(`ENOTFOUND ${hostname}`);
 			error.code = 'ENOTFOUND';
 			error.hostname = hostname;
@@ -116,20 +117,14 @@ class CacheableLookup {
 		}
 
 		const now = Date.now();
-
-		cached = cached.filter(entry => !Reflect.has(entry, 'expires') || now < entry.expires);
-
-		if (!options.details) {
-			cached = cached.map(entry => {
-				return {
-					address: entry.address,
-					family: entry.family
-				};
-			});
-		}
+		cached = cached.filter(entry => entry.ttl === 0 || now < entry.expires);
 
 		if (options.all) {
 			return cached;
+		}
+
+		if (cached.length === 1) {
+			return cached[0];
 		}
 
 		if (cached.length === 0) {
@@ -162,10 +157,7 @@ class CacheableLookup {
 		for (const entry of entries) {
 			cacheTtl = Math.max(cacheTtl, entry.ttl);
 			entry.family = family;
-
-			if (entry.ttl !== 0) {
-				entry.expires = now + (entry.ttl * 1000);
-			}
+			entry.expires = now + (entry.ttl * 1000);
 		}
 
 		cacheTtl = Math.min(this.maxTtl, cacheTtl) * 1000;
@@ -213,6 +205,10 @@ class CacheableLookup {
 			delete agent[kCacheableLookupData];
 			delete agent[kCacheableLookupInstance];
 		}
+	}
+
+	updateInterfaceInfo() {
+		this._iface = getIfaceInfo();
 	}
 }
 

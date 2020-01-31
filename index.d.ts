@@ -34,11 +34,11 @@ interface EntryObject {
 	/**
 	 * The original TTL.
 	 */
-	readonly ttl?: number;
+	readonly ttl: number;
 	/**
 	 * The expiration timestamp.
 	 */
-	readonly expires?: number;
+	readonly expires: number;
 }
 
 interface LookupOptions {
@@ -50,11 +50,6 @@ interface LookupOptions {
 	 * The record family. Must be `4` or `6`. IPv4 and IPv6 addresses are both returned by default.
 	 */
 	family?: IPFamily;
-	/**
-	 * If `true` the entries returned by `lookup(…)` and `lookupAsync(…)` will have additional `expires` and `ttl` properties representing the expiration timestamp and the original TTL.
-	 * @default false
-	 */
-	details?: boolean;
 	/**
 	 * When `true`, the callback returns all resolved addresses in an array. Otherwise, returns a single address.
 	 * @default false
@@ -78,15 +73,12 @@ export default class CacheableLookup {
 	 */
 	lookup(hostname: string, family: IPFamily, callback: (error: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
 	lookup(hostname: string, callback: (error: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
-	lookup(hostname: string, options: LookupOptions & {all: true, details: true}, callback: (error: NodeJS.ErrnoException, result: ReadonlyArray<EntryObject & {ttl: number, expires: number}>) => void): void;
 	lookup(hostname: string, options: LookupOptions & {all: true}, callback: (error: NodeJS.ErrnoException, result: ReadonlyArray<EntryObject>) => void): void;
 	lookup(hostname: string, options: LookupOptions, callback: (error: NodeJS.ErrnoException, address: string, family: IPFamily) => void): void;
 	/**
 	 * The asynchronous version of `dns.lookup(…)`.
 	 */
-	lookupAsync(hostname: string, options: LookupOptions & {all: true, details: true}): Promise<ReadonlyArray<EntryObject & {ttl: number, expires: number}>>;
 	lookupAsync(hostname: string, options: LookupOptions & {all: true}): Promise<ReadonlyArray<EntryObject>>;
-	lookupAsync(hostname: string, options: LookupOptions & {details: true}): Promise<EntryObject & {ttl: number, expires: number}>;
 	lookupAsync(hostname: string, options: LookupOptions): Promise<EntryObject>;
 	lookupAsync(hostname: string): Promise<EntryObject>;
 	lookupAsync(hostname: string, family: IPFamily): Promise<EntryObject>;
@@ -106,4 +98,8 @@ export default class CacheableLookup {
 	 * Removes itself from an Agent instance.
 	 */
 	uninstall(agent: Agent): void;
+	/**
+	 * Updates interface info. For example, you need to run this when you plug or unplug your WiFi driver.
+	 */
+	updateInterfaceInfo(): void;
 }

@@ -11,44 +11,58 @@ const makeRequest = options => new Promise((resolve, reject) => {
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const mockedInterfaces = (options = {}) => {
-	const interfaces = {
-		lo: [
-			{
-				internal: true
-			}
-		],
-		eth0: []
+const mockedInterfaces = options => {
+	const createInterfaces = (options = {}) => {
+		const interfaces = {
+			lo: [
+				{
+					internal: true
+				}
+			],
+			eth0: []
+		};
+
+		if (options.has4) {
+			interfaces.eth0.push({
+				address: '192.168.0.111',
+				netmask: '255.255.255.0',
+				family: 'IPv4',
+				mac: '00:00:00:00:00:00',
+				internal: false,
+				cidr: '192.168.0.111/24'
+			});
+		}
+
+		if (options.has6) {
+			interfaces.eth0.push({
+				address: 'fe80::c962:2946:a4e2:9f05',
+				netmask: 'ffff:ffff:ffff:ffff::',
+				family: 'IPv6',
+				mac: '00:00:00:00:00:00',
+				scopeid: 8,
+				internal: false,
+				cidr: 'fe80::c962:2946:a4e2:9f05/64'
+			});
+		}
+
+		return interfaces;
 	};
 
-	if (options.has4) {
-		interfaces.eth0.push({
-			address: '192.168.0.111',
-			netmask: '255.255.255.0',
-			family: 'IPv4',
-			mac: '00:00:00:00:00:00',
-			internal: false,
-			cidr: '192.168.0.111/24'
-		});
-	}
+	let interfaces = createInterfaces(options);
 
-	if (options.has6) {
-		interfaces.eth0.push({
-			address: 'fe80::c962:2946:a4e2:9f05',
-			netmask: 'ffff:ffff:ffff:ffff::',
-			family: 'IPv6',
-			mac: '00:00:00:00:00:00',
-			scopeid: 8,
-			internal: false,
-			cidr: 'fe80::c962:2946:a4e2:9f05/64'
-		});
-	}
+	const _updateInterfaces = (options = {}) => {
+		interfaces = createInterfaces(options);
+	};
 
-	return proxyquire('.', {
+	const result = proxyquire('.', {
 		os: {
 			networkInterfaces: () => interfaces
 		}
 	});
+
+	result._updateInterfaces = _updateInterfaces;
+
+	return result;
 };
 
 const createResolver = () => {
@@ -114,6 +128,10 @@ const createResolver = () => {
 				],
 				zeroTtl: [
 					{address: '127.0.0.127', family: 4, ttl: 0}
+				],
+				multiple: [
+					{address: '127.0.0.127', family: 4, ttl: 0},
+					{address: '127.0.0.128', family: 4, ttl: 0}
 				]
 			},
 			'192.168.0.100': {
@@ -129,11 +147,72 @@ const createResolver = () => {
 
 const resolver = createResolver();
 
+const verify = (t, entry, value) => {
+	if (Array.isArray(value)) {
+		// eslint-disable-next-line guard-for-in
+		for (const key in value) {
+			t.true(typeof entry[key].expires === 'number' && entry[key].expires >= Date.now() - 1000);
+			t.true(typeof entry[key].ttl === 'number' && entry[key].ttl >= 0);
+
+			if (!('ttl' in value[key]) && 'ttl' in entry[key]) {
+				value[key].ttl = entry[key].ttl;
+			}
+
+			if (!('expires' in value[key]) && 'expires' in entry[key]) {
+				value[key].expires = entry[key].expires;
+			}
+		}
+	} else {
+		t.true(typeof entry.expires === 'number' && entry.expires >= Date.now() - 1000);
+		t.true(typeof entry.ttl === 'number' && entry.ttl >= 0);
+
+		if (!('ttl' in value)) {
+			value.ttl = entry.ttl;
+		}
+
+		if (!('expires' in value)) {
+			value.expires = entry.expires;
+		}
+	}
+
+	t.deepEqual(entry, value);
+};
+
+test.serial('multiple entries', async t => {
+	const cacheable = new CacheableLookup({resolver});
+
+	const {random} = Math;
+
+	{
+		// Let's fool the destiny
+		Math.random = () => 0;
+		const entry = await cacheable.lookupAsync('multiple');
+
+		verify(t, entry, {
+			address: '127.0.0.127',
+			family: 4
+		});
+	}
+
+	{
+		// Let's fool the destiny
+		Math.random = () => 0.6;
+		const entry = await cacheable.lookupAsync('multiple');
+
+		verify(t, entry, {
+			address: '127.0.0.128',
+			family: 4
+		});
+	}
+
+	Math.random = random;
+});
+
 test('if `options.all` is falsy, then `options.family` is 4 when not defined', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
 	const entry = await cacheable.lookupAsync('localhost');
-	t.deepEqual(entry, {
+	verify(t, entry, {
 		address: '127.0.0.1',
 		family: 4
 	});
@@ -144,14 +223,14 @@ test('options.family', async t => {
 
 	// IPv4
 	let entry = await cacheable.lookupAsync('localhost', {family: 4});
-	t.deepEqual(entry, {
+	verify(t, entry, {
 		address: '127.0.0.1',
 		family: 4
 	});
 
 	// IPv6
 	entry = await cacheable.lookupAsync('localhost', {family: 6});
-	t.deepEqual(entry, {
+	verify(t, entry, {
 		address: '::ffff:127.0.0.2',
 		family: 6
 	});
@@ -161,7 +240,7 @@ test('options.all', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
 	const entries = await cacheable.lookupAsync('localhost', {all: true});
-	t.deepEqual(entries, [
+	verify(t, entries, [
 		{address: '127.0.0.1', family: 4},
 		{address: '::ffff:127.0.0.2', family: 6}
 	]);
@@ -172,13 +251,13 @@ test('options.all mixed with options.family', async t => {
 
 	// IPv4
 	let entries = await cacheable.lookupAsync('localhost', {all: true, family: 4});
-	t.deepEqual(entries, [
+	verify(t, entries, [
 		{address: '127.0.0.1', family: 4}
 	]);
 
 	// IPv6
 	entries = await cacheable.lookupAsync('localhost', {all: true, family: 6});
-	t.deepEqual(entries, [
+	verify(t, entries, [
 		{address: '::ffff:127.0.0.2', family: 6}
 	]);
 });
@@ -192,7 +271,7 @@ test('V4MAPPED hint', async t => {
 
 	// V4MAPPED
 	entries = await cacheable.lookupAsync('static4', {family: 6, hints: V4MAPPED});
-	t.deepEqual(entries, {address: '::ffff:127.0.0.1', family: 6});
+	verify(t, entries, {address: '::ffff:127.0.0.1', family: 6});
 });
 
 test('ADDRCONFIG hint', async t => {
@@ -209,7 +288,7 @@ test('ADDRCONFIG hint', async t => {
 		const CacheableLookup = mockedInterfaces({has4: true, has6: true});
 		const cacheable = new CacheableLookup({resolver});
 
-		t.deepEqual(await cacheable.lookupAsync('localhost', {family: 6, hints: ADDRCONFIG}), {
+		verify(t, await cacheable.lookupAsync('localhost', {family: 6, hints: ADDRCONFIG}), {
 			address: '::ffff:127.0.0.2',
 			family: 6
 		});
@@ -228,7 +307,24 @@ test('ADDRCONFIG hint', async t => {
 		const CacheableLookup = mockedInterfaces({has4: true, has6: true});
 		const cacheable = new CacheableLookup({resolver});
 
-		t.deepEqual(await cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {
+		verify(t, await cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {
+			address: '127.0.0.1',
+			family: 4
+		});
+	}
+
+	// Update interface info
+	{
+		const CacheableLookup = mockedInterfaces({has4: false, has6: true});
+		const cacheable = new CacheableLookup({resolver});
+
+		t.is(await cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), undefined);
+
+		//=> has4 = true, family = 4
+		CacheableLookup._updateInterfaces({has4: true, has6: true}); // Override os.networkInterfaces()
+		cacheable.updateInterfaceInfo();
+
+		verify(t, await cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {
 			address: '127.0.0.1',
 			family: 4
 		});
@@ -240,7 +336,7 @@ test('caching works', async t => {
 
 	// Make sure default behavior is right
 	let entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
-	t.deepEqual(entries, [
+	verify(t, entries, [
 		{address: '127.0.0.1', family: 4}
 	]);
 
@@ -249,7 +345,7 @@ test('caching works', async t => {
 
 	// Lookup again
 	entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
-	t.deepEqual(entries, [
+	verify(t, entries, [
 		{address: '127.0.0.1', family: 4}
 	]);
 });
@@ -259,7 +355,7 @@ test('respects ttl', async t => {
 
 	// Make sure default behavior is right
 	let entries = await cacheable.lookupAsync('ttl', {all: true, family: 4});
-	t.deepEqual(entries, [
+	verify(t, entries, [
 		{address: '127.0.0.1', family: 4}
 	]);
 
@@ -271,7 +367,7 @@ test('respects ttl', async t => {
 
 	// Lookup again
 	entries = await cacheable.lookupAsync('ttl', {all: true, family: 4});
-	t.deepEqual(entries, [
+	verify(t, entries, [
 		{address: '127.0.0.2', family: 4}
 	]);
 });
@@ -306,7 +402,7 @@ test('custom servers', async t => {
 
 	// .servers (set)
 	cacheable.servers = ['127.0.0.1', '192.168.0.100'];
-	t.deepEqual(await cacheable.lookupAsync('unique'), {
+	verify(t, await cacheable.lookupAsync('unique'), {
 		address: '127.0.0.1',
 		family: 4
 	});
@@ -330,18 +426,23 @@ test('callback style', async t => {
 	});
 
 	// Without options
-	t.deepEqual(await lookup('localhost'), ['127.0.0.1', 4]);
+	let result = await lookup('localhost');
+	t.is(result.length, 4);
+	t.is(result[0], '127.0.0.1');
+	t.is(result[1], 4);
+	t.true(typeof result[2] === 'number' && result[2] >= Date.now() - 1000);
+	t.true(typeof result[3] === 'number' && result[3] >= 0);
 
 	// With options
-	t.deepEqual(await lookup('localhost', {family: 6, all: true}), [
-		[{address: '::ffff:127.0.0.2', family: 6}]
-	]);
+	result = await lookup('localhost', {family: 6, all: true});
+	t.is(result.length, 1);
+	verify(t, result[0], [{address: '::ffff:127.0.0.2', family: 6}]);
 });
 
 test('works', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	t.deepEqual(await cacheable.lookupAsync('localhost'), {
+	verify(t, await cacheable.lookupAsync('localhost'), {
 		address: '127.0.0.1',
 		family: 4
 	});
@@ -353,7 +454,7 @@ test('options.maxTtl', async t => {
 		const cacheable = new CacheableLookup({resolver, maxTtl: 1});
 
 		// Make sure default behavior is right
-		t.deepEqual(await cacheable.lookupAsync('maxTtl'), {
+		verify(t, await cacheable.lookupAsync('maxTtl'), {
 			address: '127.0.0.1',
 			family: 4
 		});
@@ -365,7 +466,7 @@ test('options.maxTtl', async t => {
 		await sleep(2000);
 
 		// Lookup again
-		t.deepEqual(await cacheable.lookupAsync('maxTtl'), {
+		verify(t, await cacheable.lookupAsync('maxTtl'), {
 			address: '127.0.0.2',
 			family: 4
 		});
@@ -379,7 +480,7 @@ test('options.maxTtl', async t => {
 		const cacheable = new CacheableLookup({resolver, maxTtl: 0});
 
 		// Make sure default behavior is right
-		t.deepEqual(await cacheable.lookupAsync('maxTtl'), {
+		verify(t, await cacheable.lookupAsync('maxTtl'), {
 			address: '127.0.0.1',
 			family: 4
 		});
@@ -391,28 +492,18 @@ test('options.maxTtl', async t => {
 		await sleep(10);
 
 		// Lookup again
-		t.deepEqual(await cacheable.lookupAsync('maxTtl'), {
+		verify(t, await cacheable.lookupAsync('maxTtl'), {
 			address: '127.0.0.2',
 			family: 4
 		});
 	}
 });
 
-test('options.details', async t => {
-	const cacheable = new CacheableLookup({resolver});
-	const detailed = await cacheable.lookupAsync('localhost', {details: true});
-
-	t.is(detailed.address, '127.0.0.1');
-	t.is(detailed.family, 4);
-	t.true(typeof detailed.expires === 'number');
-	t.true(typeof detailed.ttl === 'number');
-});
-
 test('entry with 0 ttl', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
 	// Make sure default behavior is right
-	t.deepEqual(await cacheable.lookupAsync('zeroTtl'), {
+	verify(t, await cacheable.lookupAsync('zeroTtl'), {
 		address: '127.0.0.127',
 		family: 4
 	});
@@ -421,7 +512,7 @@ test('entry with 0 ttl', async t => {
 	resolver.data['127.0.0.1'].zeroTtl[0].address = '127.0.0.1';
 
 	// Lookup again
-	t.deepEqual(await cacheable.lookupAsync('zeroTtl'), {
+	verify(t, await cacheable.lookupAsync('zeroTtl'), {
 		address: '127.0.0.1',
 		family: 4
 	});
@@ -432,12 +523,12 @@ test('http example', async t => {
 
 	const options = {
 		hostname: 'example',
-		port: 8080,
+		port: 9999,
 		lookup: cacheable.lookup
 	};
 
 	await t.throwsAsync(makeRequest(options), {
-		message: 'connect ECONNREFUSED 127.0.0.127:8080'
+		message: 'connect ECONNREFUSED 127.0.0.127:9999'
 	});
 });
 
@@ -462,11 +553,11 @@ test.serial('install & uninstall', async t => {
 
 	const options = {
 		hostname: 'example',
-		port: 8080
+		port: 9999
 	};
 
 	await t.throwsAsync(makeRequest(options), {
-		message: 'connect ECONNREFUSED 127.0.0.127:8080'
+		message: 'connect ECONNREFUSED 127.0.0.127:9999'
 	});
 
 	cacheable.uninstall(http.globalAgent);
@@ -528,12 +619,12 @@ test.serial('install - providing custom lookup function anyway', async t => {
 
 	const options = {
 		hostname: 'example',
-		port: 8080,
+		port: 9999,
 		lookup: b.lookup
 	};
 
 	await t.throwsAsync(makeRequest(options), {
-		message: 'connect ECONNREFUSED 127.0.0.127:8080'
+		message: 'connect ECONNREFUSED 127.0.0.127:9999'
 	});
 
 	a.uninstall(http.globalAgent);
