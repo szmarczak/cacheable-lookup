@@ -1,6 +1,8 @@
 import Keyv = require('keyv');
-import {Resolver, LookupAddress} from 'dns';
+import {Resolver, LookupAddress, promises as dnsPromises} from 'dns';
 import {Agent} from 'http';
+
+type AsyncResolver = dnsPromises.Resolver;
 
 type IPFamily = 4 | 6;
 
@@ -17,9 +19,9 @@ export interface Options {
 	maxTtl?: number;
 	/**
 	 * DNS Resolver used to make DNS queries.
-	 * @default new dns.Resolver()
+	 * @default new dns.promises.Resolver()
 	 */
-	resolver?: Resolver;
+	resolver?: Resolver | AsyncResolver;
 }
 
 interface EntryObject {

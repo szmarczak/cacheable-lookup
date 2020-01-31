@@ -1,8 +1,10 @@
 'use strict';
-const {Resolver, V4MAPPED, ADDRCONFIG} = require('dns');
+const {V4MAPPED, ADDRCONFIG, promises: dnsPromises} = require('dns');
 const {promisify} = require('util');
 const os = require('os');
 const Keyv = require('keyv');
+
+const {Resolver: AsyncResolver} = dnsPromises;
 
 const kCacheableLookupData = Symbol('cacheableLookupData');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
@@ -55,9 +57,15 @@ class CacheableLookup {
 
 		this.maxTtl = maxTtl;
 
-		this._resolver = resolver || new Resolver();
-		this._resolve4 = promisify(this._resolver.resolve4.bind(this._resolver));
-		this._resolve6 = promisify(this._resolver.resolve6.bind(this._resolver));
+		this._resolver = resolver || new AsyncResolver();
+
+		if (this._resolver instanceof AsyncResolver) {
+			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
+			this._resolve6 = this._resolver.resolve6.bind(this._resolver);
+		} else {
+			this._resolve4 = promisify(this._resolver.resolve4.bind(this._resolver));
+			this._resolve6 = promisify(this._resolver.resolve6.bind(this._resolver));
+		}
 
 		this._iface = getIfaceInfo();
 

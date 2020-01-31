@@ -45,7 +45,7 @@ Returns a new instance of `CacheableLookup`.
 
 #### options
 
-Type: `Object`<br>
+Type: `object`<br>
 Default: `{}`
 
 Options used to cache the DNS lookups.
@@ -68,14 +68,14 @@ If set to `0`, it will make a new DNS query each time.
 
 ##### options.resolver
 
-Type: `Function`<br>
-Default: [`new dns.Resolver()`](https://nodejs.org/api/dns.html#dns_class_dns_resolver)
+Type: `dns.Resolver | dns.promises.Resolver`<br>
+Default: [`new dns.promises.Resolver()`](https://nodejs.org/api/dns.html#dns_class_dns_resolver)
 
 An instance of [DNS Resolver](https://nodejs.org/api/dns.html#dns_class_dns_resolver) used to make DNS queries.
 
 ### Entry object
 
-Type: `Object`
+Type: `object`
 
 #### address
 
@@ -133,7 +133,7 @@ Type: `string`
 
 ##### options
 
-Type: `Object`
+Type: `object`
 
 The same as the [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) options.
 

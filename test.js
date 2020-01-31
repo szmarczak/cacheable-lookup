@@ -1,4 +1,5 @@
 const {V4MAPPED, ADDRCONFIG} = require('dns');
+const {Resolver: AsyncResolver} = require('dns').promises;
 const {promisify} = require('util');
 const http = require('http');
 const test = require('ava');
@@ -641,4 +642,14 @@ test.serial('throws when calling `.uninstall()` on the wrong instance', t => {
 	});
 
 	a.uninstall(http.globalAgent);
+});
+
+test('async resolver', async t => {
+	const cacheable = new CacheableLookup({resolver: new AsyncResolver()});
+
+	t.is(typeof cacheable._resolve4, 'function');
+	t.is(typeof cacheable._resolve6, 'function');
+
+	const {address} = await cacheable.lookupAsync('localhost');
+	t.is(address, '127.0.0.1');
 });
