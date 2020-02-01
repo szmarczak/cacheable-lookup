@@ -8,11 +8,6 @@ type IPFamily = 4 | 6;
 
 export interface Options {
 	/**
-	 * A Keyv adapter which stores the cache.
-	 * @default new Map()
-	 */
-	cacheAdapter?: Keyv;
-	/**
 	 * Limits the cache time (TTL). If set to `0`, it will make a new DNS query each time.
 	 * @default Infinity
 	 */
@@ -57,6 +52,9 @@ interface LookupOptions {
 	 * @default false
 	 */
 	all?: boolean;
+}
+
+interface AsyncLookupOptions extends LookupOptions {
 	/**
 	 * Throw when there's no match. If set to `false` and it gets no match, it will return `undefined`.
 	 * @default false
@@ -80,18 +78,18 @@ export default class CacheableLookup {
 	/**
 	 * The asynchronous version of `dns.lookup(…)`.
 	 */
-	lookupAsync(hostname: string, options: LookupOptions & {all: true}): Promise<ReadonlyArray<EntryObject>>;
-	lookupAsync(hostname: string, options: LookupOptions): Promise<EntryObject>;
+	lookupAsync(hostname: string, options: AsyncLookupOptions & {all: true}): Promise<ReadonlyArray<EntryObject>>;
+	lookupAsync(hostname: string, options: AsyncLookupOptions): Promise<EntryObject>;
 	lookupAsync(hostname: string): Promise<EntryObject>;
 	lookupAsync(hostname: string, family: IPFamily): Promise<EntryObject>;
 	/**
 	 * An asynchronous function which returns cached DNS lookup entries. This is the base for `lookupAsync(hostname, options)` and `lookup(hostname, options, callback)`.
 	 */
-	query(hostname: string, family: IPFamily): Promise<ReadonlyArray<EntryObject>>;
+	query(hostname: string): Promise<ReadonlyArray<EntryObject>>;
 	/**
 	 * An asynchronous function which makes a new DNS lookup query and updates the database. This is used by `query(hostname, family)` if no entry in the database is present. Returns an array of objects with `address`, `family`, `ttl` and `expires` properties.
 	 */
-	queryAndCache(hostname: string, family: IPFamily): Promise<ReadonlyArray<EntryObject>>;
+	queryAndCache(hostname: string): Promise<ReadonlyArray<EntryObject>>;
 	/**
 	 * Attaches itself to an Agent instance.
 	 */
@@ -104,4 +102,8 @@ export default class CacheableLookup {
 	 * Updates interface info. For example, you need to run this when you plug or unplug your WiFi driver.
 	 */
 	updateInterfaceInfo(): void;
+	/**
+	 * Clears the cache.
+	 */
+	clear(): void;
 }

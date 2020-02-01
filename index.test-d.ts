@@ -26,5 +26,8 @@ cacheable.lookup('localhost', {all: true}, (error, results) => {
   expectType<ReadonlyArray<EntryObject>>(results);
 });
 
-expectType<ReadonlyArray<EntryObject>>(await cacheable.query('localhost', 4));
-expectType<ReadonlyArray<EntryObject>>(await cacheable.queryAndCache('localhost', 4));
+expectType<ReadonlyArray<EntryObject>>(await cacheable.query('localhost'));
+expectType<ReadonlyArray<EntryObject>>(await cacheable.queryAndCache('localhost'));
+
+expectType<void>(cacheable.updateInterfaceInfo());
+expectType<void>(cacheable.clear());

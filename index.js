@@ -2,7 +2,6 @@
 const {V4MAPPED, ADDRCONFIG, promises: dnsPromises} = require('dns');
 const {promisify} = require('util');
 const os = require('os');
-const Keyv = require('keyv');
 
 const {Resolver: AsyncResolver} = dnsPromises;
 
@@ -47,16 +46,49 @@ const getIfaceInfo = () => {
 	return {has4, has6};
 };
 
-class CacheableLookup {
-	constructor({cacheAdapter, maxTtl = Infinity, resolver} = {}) {
-		this.cache = new Keyv({
-			uri: typeof cacheAdapter === 'string' && cacheAdapter,
-			store: typeof cacheAdapter !== 'string' && cacheAdapter,
-			namespace: 'cached-lookup'
-		});
+class TTLMap {
+	constructor() {
+		this.values = new Map();
+		this.expiries = new Map();
+	}
 
+	set(key, value, ttl) {
+		this.values.set(key, value);
+		this.expiries.set(key, ttl && (ttl + Date.now()));
+	}
+
+	get(key) {
+		const expiry = this.expiries.get(key);
+
+		if (typeof expiry === 'number') {
+			if (Date.now() > expiry) {
+				this.values.delete(key);
+				this.expiries.delete(key);
+
+				return;
+			}
+		}
+
+		return this.values.get(key);
+	}
+
+	clear() {
+		this.values.clear();
+		this.expiries.clear();
+	}
+
+	get size() {
+		return this.values.size;
+	}
+}
+
+const ttl = {ttl: true};
+
+class CacheableLookup {
+	constructor({maxTtl = Infinity, resolver} = {}) {
 		this.maxTtl = maxTtl;
 
+		this._cache = new TTLMap();
 		this._resolver = resolver || new AsyncResolver();
 
 		if (this._resolver instanceof AsyncResolver) {
@@ -98,17 +130,18 @@ class CacheableLookup {
 	}
 
 	async lookupAsync(hostname, options = {}) {
-		let cached;
-		if (!options.family && options.all) {
-			const [cached4, cached6] = await Promise.all([this.lookupAsync(hostname, {all: true, family: 4}), this.lookupAsync(hostname, {all: true, family: 6})]);
-			cached = [...cached4, ...cached6];
-		} else {
-			cached = await this.query(hostname, options.family || 4);
+		let cached = await this.query(hostname);
 
-			if (cached.length === 0 && options.family === 6 && options.hints & V4MAPPED) {
-				cached = await this.query(hostname, 4);
+		if (options.family === 6) {
+			const filtered = cached.filter(entry => entry.family === 6);
+
+			if (filtered.length === 0 && options.hints & V4MAPPED) {
 				map4to6(cached);
+			} else {
+				cached = filtered;
 			}
+		} else if (!options.all || options.family === 4) {
+			cached = cached.filter(entry => entry.family === 4);
 		}
 
 		if (options.hints & ADDRCONFIG) {
@@ -142,36 +175,49 @@ class CacheableLookup {
 		return this._getEntry(cached);
 	}
 
-	async query(hostname, family) {
-		let cached = await this.cache.get(`${hostname}:${family}`);
+	async query(hostname) {
+		let cached = this._cache.get(hostname);
 		if (!cached) {
-			cached = await this.queryAndCache(hostname, family);
+			cached = await this.queryAndCache(hostname);
 		}
+
+		cached = cached.map(entry => {
+			return {...entry};
+		});
 
 		return cached;
 	}
 
-	async queryAndCache(hostname, family) {
-		const resolve = family === 4 ? this._resolve4 : this._resolve6;
-		const entries = await resolve(hostname, {ttl: true});
-
-		if (entries === undefined) {
-			return [];
-		}
-
-		const now = Date.now();
+	async queryAndCache(hostname) {
+		const [As, AAAAs] = await Promise.all([this._resolve4(hostname, ttl).catch(() => []), this._resolve6(hostname, ttl).catch(() => [])]);
 
 		let cacheTtl = 0;
-		for (const entry of entries) {
-			cacheTtl = Math.max(cacheTtl, entry.ttl);
-			entry.family = family;
-			entry.expires = now + (entry.ttl * 1000);
+		const now = Date.now();
+
+		if (As) {
+			for (const entry of As) {
+				entry.family = 4;
+				entry.expires = now + (entry.ttl * 1000);
+
+				cacheTtl = Math.max(cacheTtl, entry.ttl);
+			}
 		}
+
+		if (AAAAs) {
+			for (const entry of AAAAs) {
+				entry.family = 6;
+				entry.expires = now + (entry.ttl * 1000);
+
+				cacheTtl = Math.max(cacheTtl, entry.ttl);
+			}
+		}
+
+		const entries = [...(As || []), ...(AAAAs || [])];
 
 		cacheTtl = Math.min(this.maxTtl, cacheTtl) * 1000;
 
-		if (this.maxTtl !== 0 && cacheTtl !== 0) {
-			await this.cache.set(`${hostname}:${family}`, entries, cacheTtl);
+		if (this.maxTtl > 0 && cacheTtl > 0) {
+			this._cache.set(hostname, entries, cacheTtl);
 		}
 
 		return entries;
@@ -217,6 +263,11 @@ class CacheableLookup {
 
 	updateInterfaceInfo() {
 		this._iface = getIfaceInfo();
+		this._cache.clear();
+	}
+
+	clear() {
+		this._cache.clear();
 	}
 }
 
