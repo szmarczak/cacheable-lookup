@@ -544,8 +544,8 @@ test('.lookup() and .lookupAsync() are automatically bounded', async t => {
 test('works (Internet connection)', async t => {
 	const cacheable = new CacheableLookup();
 
-	const {address, family} = await cacheable.lookupAsync('example.com');
-	t.true(typeof address === 'string');
+	const {address, family} = await cacheable.lookupAsync('1dot1dot1dot1.cloudflare-dns.com');
+	t.true(address === '1.1.1.1' || address === '1.0.0.1');
 	t.is(family, 4);
 });
 
@@ -651,8 +651,8 @@ test('async resolver (Internet connection)', async t => {
 	t.is(typeof cacheable._resolve4, 'function');
 	t.is(typeof cacheable._resolve6, 'function');
 
-	const {address} = await cacheable.lookupAsync('localhost');
-	t.is(address, '127.0.0.1');
+	const {address} = await cacheable.lookupAsync('1dot1dot1dot1.cloudflare-dns.com');
+	t.true(address === '1.1.1.1' || address === '1.0.0.1');
 });
 
 test('clear() works', async t => {
