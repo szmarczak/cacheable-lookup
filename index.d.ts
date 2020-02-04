@@ -91,6 +91,10 @@ export default class CacheableLookup {
 	 */
 	queryAndCache(hostname: string): Promise<ReadonlyArray<EntryObject>>;
 	/**
+	 * Removes outdated entries.
+	 */
+	tick(): void;
+	/**
 	 * Attaches itself to an Agent instance.
 	 */
 	install(agent: Agent): void;

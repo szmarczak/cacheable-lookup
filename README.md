@@ -156,6 +156,10 @@ This is used by `query(hostname)` if no entry in the database is present.
 
 Returns an array of objects with `address`, `family`, `ttl` and `expires` properties.
 
+#### tick()
+
+Removes outdated entries.
+
 #### updateInterfaceInfo()
 
 Updates interface info. For example, you need to run this when you plug or unplug your WiFi driver.

@@ -665,3 +665,47 @@ test('clear() works', async t => {
 
 	t.is(cacheable._cache.size, 0);
 });
+
+test('tick() works', async t => {
+	const cacheable = new CacheableLookup({resolver});
+
+	await cacheable.lookupAsync('temporary');
+	t.is(cacheable._cache.size, 1);
+
+	await sleep(1000);
+
+	cacheable.tick();
+	t.is(cacheable._cache.size, 0);
+});
+
+test('tick() is locked for 1s', async t => {
+	const cacheable = new CacheableLookup();
+
+	cacheable.tick();
+	t.true(cacheable._tickLocked);
+
+	await sleep(1000);
+	t.false(cacheable._tickLocked);
+});
+
+test.serial('double tick() has no effect', t => {
+	const cacheable = new CacheableLookup();
+
+	const _setTimeout = setTimeout;
+	global.setTimeout = (...args) => {
+		t.pass();
+
+		global.setTimeout = _setTimeout;
+		return _setTimeout(...args);
+	};
+
+	cacheable.tick();
+
+	global.setTimeout = () => {
+		t.fail('this should not be called');
+	};
+
+	cacheable.tick();
+
+	global.setTimeout = _setTimeout;
+});

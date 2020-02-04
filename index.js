@@ -5,7 +5,7 @@ const os = require('os');
 
 const {Resolver: AsyncResolver} = dnsPromises;
 
-const kCacheableLookupData = Symbol('cacheableLookupData');
+const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
 
 const verifyAgent = agent => {
@@ -72,6 +72,11 @@ class TTLMap {
 		return this.values.get(key);
 	}
 
+	delete(key) {
+		this.values.delete(key);
+		this.expiries.delete(key);
+	}
+
 	clear() {
 		this.values.clear();
 		this.expiries.clear();
@@ -100,6 +105,7 @@ class CacheableLookup {
 		}
 
 		this._iface = getIfaceInfo();
+		this._tickLocked = false;
 
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
@@ -227,36 +233,59 @@ class CacheableLookup {
 		return entries[Math.floor(Math.random() * entries.length)];
 	}
 
+	tick() {
+		if (this._tickLocked) {
+			return;
+		}
+
+		const now = Date.now();
+
+		for (const [hostname, expiry] of this._cache.expiries) {
+			if (now > expiry) {
+				this._cache.delete(hostname);
+			}
+		}
+
+		this._tickLocked = true;
+
+		setTimeout(() => {
+			this._tickLocked = false;
+		}, 1000).unref();
+	}
+
 	install(agent) {
 		verifyAgent(agent);
 
-		if (kCacheableLookupData in agent) {
+		if (kCacheableLookupCreateConnection in agent) {
 			throw new Error('CacheableLookup has been already installed');
 		}
 
-		agent[kCacheableLookupData] = agent.createConnection;
+		agent[kCacheableLookupCreateConnection] = agent.createConnection;
 		agent[kCacheableLookupInstance] = this;
 
 		agent.createConnection = (options, callback) => {
 			if (!('lookup' in options)) {
 				options.lookup = this.lookup;
+
+				// Make sure the database is up to date
+				this.tick();
 			}
 
-			return agent[kCacheableLookupData](options, callback);
+			return agent[kCacheableLookupCreateConnection](options, callback);
 		};
 	}
 
 	uninstall(agent) {
 		verifyAgent(agent);
 
-		if (agent[kCacheableLookupData]) {
+		if (agent[kCacheableLookupCreateConnection]) {
 			if (agent[kCacheableLookupInstance] !== this) {
 				throw new Error('The agent is not owned by this CacheableLookup instance');
 			}
 
-			agent.createConnection = agent[kCacheableLookupData];
+			agent.createConnection = agent[kCacheableLookupCreateConnection];
 
-			delete agent[kCacheableLookupData];
+			delete agent[kCacheableLookupCreateConnection];
 			delete agent[kCacheableLookupInstance];
 		}
 	}
