@@ -30,4 +30,5 @@ expectType<ReadonlyArray<EntryObject>>(await cacheable.query('localhost'));
 expectType<ReadonlyArray<EntryObject>>(await cacheable.queryAndCache('localhost'));
 
 expectType<void>(cacheable.updateInterfaceInfo());
+expectType<void>(cacheable.tick());
 expectType<void>(cacheable.clear());
