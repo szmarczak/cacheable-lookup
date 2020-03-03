@@ -194,7 +194,7 @@ class CacheableLookup {
 				for (let index = 0; index < cached.length;) {
 					const entry = cached[index];
 
-					if (now < entry.expires || entry.ttl === 0) {
+					if (now >= entry.expires || entry.ttl === 0) {
 						cached.splice(index, 1);
 					} else {
 						index++;
