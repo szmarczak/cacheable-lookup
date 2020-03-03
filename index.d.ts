@@ -17,6 +17,11 @@ export interface Options {
 	 * @default new dns.promises.Resolver()
 	 */
 	resolver?: Resolver | AsyncResolver;
+	/**
+	 * The full path to the `hosts` file.
+	 * @default '/etc/hosts'
+	 */
+	customHostsPath?: string | false;
 }
 
 interface EntryObject {

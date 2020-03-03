@@ -2,6 +2,7 @@
 const {V4MAPPED, ADDRCONFIG, promises: dnsPromises} = require('dns');
 const {promisify} = require('util');
 const os = require('os');
+const createHostsResolver = require('./create-hosts-resolver');
 
 const {Resolver: AsyncResolver} = dnsPromises;
 
@@ -90,7 +91,7 @@ class TTLMap {
 const ttl = {ttl: true};
 
 class CacheableLookup {
-	constructor({maxTtl = Infinity, resolver} = {}) {
+	constructor({maxTtl = Infinity, resolver, customHostsPath} = {}) {
 		this.maxTtl = maxTtl;
 
 		this._cache = new TTLMap();
@@ -106,6 +107,9 @@ class CacheableLookup {
 
 		this._iface = getIfaceInfo();
 		this._tickLocked = false;
+		this._hostsResolver = createHostsResolver(customHostsPath);
+
+		this.tick();
 
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
@@ -126,7 +130,7 @@ class CacheableLookup {
 		}
 
 		// eslint-disable-next-line promise/prefer-await-to-then
-		this.lookupAsync(hostname, {...options, throwNotFound: true}).then(result => {
+		this.lookupAsync(hostname, options, true).then(result => {
 			if (options.all) {
 				callback(null, result);
 			} else {
@@ -135,7 +139,7 @@ class CacheableLookup {
 		}).catch(callback);
 	}
 
-	async lookupAsync(hostname, options = {}) {
+	async lookupAsync(hostname, options = {}, throwNotFound = undefined) {
 		let cached = await this.query(hostname);
 
 		if (options.family === 6) {
@@ -155,16 +159,17 @@ class CacheableLookup {
 			cached = cached.filter(entry => entry.family === 6 ? _iface.has6 : _iface.has4);
 		}
 
-		if (cached.length === 0 && options.throwNotFound) {
-			const error = new Error(`ENOTFOUND ${hostname}`);
-			error.code = 'ENOTFOUND';
-			error.hostname = hostname;
+		if (cached.length === 0) {
+			if (throwNotFound || options.throwNotFound) {
+				const error = new Error(`ENOTFOUND ${hostname}`);
+				error.code = 'ENOTFOUND';
+				error.hostname = hostname;
 
-			throw error;
+				throw error;
+			}
+
+			return undefined;
 		}
-
-		const now = Date.now();
-		cached = cached.filter(entry => entry.ttl === 0 || now < entry.expires);
 
 		if (options.all) {
 			return cached;
@@ -174,16 +179,31 @@ class CacheableLookup {
 			return cached[0];
 		}
 
-		if (cached.length === 0) {
-			return undefined;
-		}
-
 		return this._getEntry(cached);
 	}
 
 	async query(hostname) {
-		let cached = this._cache.get(hostname);
+		let cached = this._hostsResolver.hosts[hostname];
+
 		if (!cached) {
+			cached = this._cache.get(hostname);
+
+			if (cached) {
+				const now = Date.now();
+
+				for (let index = 0; index < cached.length;) {
+					const entry = cached[index];
+
+					if (now < entry.expires || entry.ttl === 0) {
+						cached.splice(index, 1);
+					} else {
+						index++;
+					}
+				}
+			}
+		}
+
+		if (!cached || cached.length === 0) {
 			cached = await this.queryAndCache(hostname);
 		}
 
@@ -245,6 +265,8 @@ class CacheableLookup {
 				this._cache.delete(hostname);
 			}
 		}
+
+		this._hostsResolver.updateHosts();
 
 		this._tickLocked = true;
 

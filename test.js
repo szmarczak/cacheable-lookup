@@ -709,3 +709,61 @@ test.serial('double tick() has no effect', t => {
 
 	global.setTimeout = _setTimeout;
 });
+
+test('respects the `hosts` file', async t => {
+	const cacheable = new CacheableLookup({
+		customHostsPath: './hosts.txt'
+	});
+
+	await sleep(100);
+
+	const getAddress = async (hostname) => {
+		const result = await cacheable.lookupAsync(hostname);
+
+		if (result) {
+			t.is(result.family, 4);
+			t.is(result.ttl, Infinity);
+			t.is(result.expires, Infinity);
+
+			return result.address;
+		}
+
+		return result;
+	};
+
+	t.is(await getAddress('helloworld'), '127.0.0.1');
+	t.is(await getAddress('foobar'), '127.0.0.1');
+	t.is(await getAddress('woofwoof'), undefined);
+	t.is(await getAddress('noiphere'), undefined);
+});
+
+test('respects the `hosts` file #2', async t => {
+	const cacheable = new CacheableLookup({
+		customHostsPath: false,
+		resolver
+	});
+
+	await sleep(100);
+
+	const getAddress = async (hostname) => {
+		const result = await cacheable.lookupAsync(hostname);
+
+		if (result) {
+			t.is(result.family, 4);
+			t.is(result.ttl, Infinity);
+			t.is(result.expires, Infinity);
+
+			return result.address;
+		}
+
+		return result;
+	};
+
+	t.is(await getAddress('helloworld'), undefined);
+	t.is(await getAddress('foobar'), undefined);
+	t.is(await getAddress('woofwoof'), undefined);
+	t.is(await getAddress('noiphere'), undefined);
+
+	const {address} = await cacheable.lookupAsync('localhost');
+	t.is(address, '127.0.0.1');
+});

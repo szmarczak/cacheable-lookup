@@ -4,7 +4,7 @@ const Benchmark = require('benchmark');
 const CacheableLookup = require('.');
 
 const cacheable = new CacheableLookup();
-const notCacheable = new CacheableLookup({maxTtl: 0});
+const notCacheable = new CacheableLookup({maxTtl: 0, customHostsPath: false});
 const suite = new Benchmark.Suite();
 
 const options = {

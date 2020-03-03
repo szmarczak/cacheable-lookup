@@ -66,6 +66,13 @@ Default: [`new dns.promises.Resolver()`](https://nodejs.org/api/dns.html#dns_cla
 
 An instance of [DNS Resolver](https://nodejs.org/api/dns.html#dns_class_dns_resolver) used to make DNS queries.
 
+##### options.customHostsPath
+
+Type: `string`<br>
+Default: `undefined` (OS-specific)
+
+The full path to the `hosts` file.
+
 ### Entry object
 
 Type: `object`
@@ -175,18 +182,18 @@ Clears the cache.
 See the benchmarks (queries `localhost`, performed on i7-7700k):
 
 ```
-CacheableLookup#lookupAsync                x 2,525,219 ops/sec ±1.66%  (86 runs sampled)
-CacheableLookup#lookupAsync.all            x 2,648,106 ops/sec ±0.59%  (88 runs sampled)
-CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,263,173 ops/sec ±0.95%  (88 runs sampled)
-CacheableLookup#lookup                     x 2,108,952 ops/sec ±0.97%  (89 runs sampled)
-CacheableLookup#lookup.all                 x 2,081,357 ops/sec ±1.19%  (83 runs sampled)
-CacheableLookup#lookup.all.ADDRCONFIG      x 1,913,955 ops/sec ±0.60%  (89 runs sampled)
-CacheableLookup#lookupAsync - zero TTL     x 36.50     ops/sec ±11.21% (39 runs sampled)
-CacheableLookup#lookup - zero TTL          x 33.66     ops/sec ±7.57%  (47 runs sampled)
-dns#resolve4                               x 40.31     ops/sec ±16.10% (49 runs sampled)
-dns#lookup                                 x 13,722    ops/sec ±20.69% (37 runs sampled)
-dns#lookup.all                             x 30,343    ops/sec ±28.97% (47 runs sampled)
-dns#lookup.all.ADDRCONFIG                  x 7,023     ops/sec ±15.86% (31 runs sampled)
+CacheableLookup#lookupAsync                x 4,095,922 ops/sec ±1.01%  (84 runs sampled)
+CacheableLookup#lookupAsync.all            x 4,472,817 ops/sec ±0.67%  (88 runs sampled)
+CacheableLookup#lookupAsync.all.ADDRCONFIG x 3,713,702 ops/sec ±0.66%  (85 runs sampled)
+CacheableLookup#lookup                     x 3,332,170 ops/sec ±0.50%  (82 runs sampled)
+CacheableLookup#lookup.all                 x 3,303,159 ops/sec ±0.61%  (84 runs sampled)
+CacheableLookup#lookup.all.ADDRCONFIG      x 2,851,815 ops/sec ±0.82%  (84 runs sampled)
+CacheableLookup#lookupAsync - zero TTL     x 226       ops/sec ±3.55%  (56 runs sampled)
+CacheableLookup#lookup      - zero TTL     x 228       ops/sec ±2.48%  (62 runs sampled)
+dns#resolve4                               x 346       ops/sec ±3.58%  (55 runs sampled)
+dns#lookup                                 x 20,368    ops/sec ±38.31% (53 runs sampled)
+dns#lookup.all                             x 13,529    ops/sec ±31.35% (29 runs sampled)
+dns#lookup.all.ADDRCONFIG                  x 6,211     ops/sec ±22.92% (26 runs sampled)
 Fastest is CacheableLookup#lookupAsync.all
 ```
 

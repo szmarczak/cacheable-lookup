@@ -1,0 +1,6 @@
+# this is a comment
+127.0.0.1 helloworld
+127.0.0.1 foobar # this is a comment
+# this is yet another comment 127.0.0.1 woofwoof
+noiphere
+127.0.0.1 # no host here
