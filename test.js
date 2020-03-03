@@ -717,7 +717,7 @@ test('respects the `hosts` file', async t => {
 
 	await sleep(100);
 
-	const getAddress = async (hostname) => {
+	const getAddress = async hostname => {
 		const result = await cacheable.lookupAsync(hostname);
 
 		if (result) {
@@ -745,7 +745,7 @@ test('respects the `hosts` file #2', async t => {
 
 	await sleep(100);
 
-	const getAddress = async (hostname) => {
+	const getAddress = async hostname => {
 		const result = await cacheable.lookupAsync(hostname);
 
 		if (result) {
