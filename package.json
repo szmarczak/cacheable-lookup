@@ -1,13 +1,14 @@
 {
   "name": "cacheable-lookup",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "A cacheable dns.lookup(…) that respects the TTL",
   "engines": {
     "node": ">=10"
   },
   "files": [
     "index.js",
-    "index.d.ts"
+    "index.d.ts",
+    "create-hosts-resolver.js"
   ],
   "main": "index.js",
   "scripts": {
