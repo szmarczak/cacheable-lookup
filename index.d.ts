@@ -18,7 +18,7 @@ export interface Options {
 	 */
 	resolver?: Resolver | AsyncResolver;
 	/**
-	 * The full path to the `hosts` file.
+	 * The full path to the `hosts` file. Set this to `false` to prevent loading entries from the `hosts` file.
 	 * @default '/etc/hosts'
 	 */
 	customHostsPath?: string | false;

@@ -71,7 +71,7 @@ An instance of [DNS Resolver](https://nodejs.org/api/dns.html#dns_class_dns_reso
 Type: `string`<br>
 Default: `undefined` (OS-specific)
 
-The full path to the `hosts` file.
+The full path to the `hosts` file. Set this to `false` to prevent loading entries from the `hosts` file.
 
 ### Entry object
 
