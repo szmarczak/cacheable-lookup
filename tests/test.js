@@ -738,6 +738,7 @@ test('respects the `hosts` file', async t => {
 	t.is(await getAddress('foo2'), '127.0.0.1');
 	t.is(await getAddress('manywhitespaces'), '127.0.0.1');
 	t.is(await getAddress('startswithwhitespace'), '127.0.0.1');
+	t.is(await getAddress('tab'), '127.0.0.1');
 
 	{
 		const entry = await cacheable.lookupAsync('foo3', {family: 4});
@@ -798,6 +799,7 @@ test('the `hosts` file support can be turned off', async t => {
 	t.is(await getAddress('foo2'), undefined);
 	t.is(await getAddress('manywhitespaces'), undefined);
 	t.is(await getAddress('startswithwhitespace'), undefined);
+	t.is(await getAddress('tab'), undefined);
 	t.is(await cacheable.lookupAsync('foo3', {family: 4, throwNotFound: false}), undefined);
 	t.is(await cacheable.lookupAsync('foo3', {family: 6, throwNotFound: false}), undefined);
 	t.deepEqual(await cacheable.lookupAsync('foo4', {all: true, throwNotFound: false}), []);

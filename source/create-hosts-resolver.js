@@ -13,6 +13,7 @@ const fileOptions = {
 };
 
 const whitespaceRegExp = /[^\S\r\n]{2,}/g;
+const tabRegExp = /\t+/g;
 const startsWithWhitespaceRegExp = /^[^\S\r\n]+/gm;
 
 const create = (customHostsPath = hostsPath) => {
@@ -38,6 +39,7 @@ const create = (customHostsPath = hostsPath) => {
 
 		let lines = await readFile(customHostsPath, fileOptions);
 		lines = lines.replace(whitespaceRegExp, ' ');
+		lines = lines.replace(tabRegExp, ' ');
 		lines = lines.replace(startsWithWhitespaceRegExp, '');
 		lines = lines.split('\n');
 
