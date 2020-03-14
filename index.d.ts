@@ -6,11 +6,13 @@ type AsyncResolver = dnsPromises.Resolver;
 
 type IPFamily = 4 | 6;
 
+type TPromise<T> = T | Promise<T>;
+
 export interface CacheInstance {
-	set(hostname: string, entries: EntryObject[], ttl: number): void | Promise<void> | boolean | Promise<boolean>;
-	get(hostname: string): EntryObject[] | Promise<EntryObject[]>;
-	delete(hostname: string): boolean | Promise<boolean>;
-	clear(): void | Promise<void>;
+	set(hostname: string, entries: EntryObject[], ttl: number): TPromise<void | boolean>;
+	get(hostname: string): TPromise<EntryObject[] | undefined>;
+	delete(hostname: string): TPromise<boolean>;
+	clear(): TPromise<void>;
 }
 
 export interface Options {
