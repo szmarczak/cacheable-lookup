@@ -6,11 +6,9 @@
     "node": ">=10"
   },
   "files": [
-    "index.js",
-    "index.d.ts",
-    "create-hosts-resolver.js"
+    "source"
   ],
-  "main": "index.js",
+  "main": "source/index.js",
   "scripts": {
     "test": "xo && nyc ava && tsd"
   },

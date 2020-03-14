@@ -4,3 +4,10 @@
 # this is yet another comment 127.0.0.1 woofwoof
 noiphere
 127.0.0.1 # no host here
+127.0.0.1 foo1 foo2
+127.0.0.1 foo3
+::1 foo3
+127.0.0.1 foo4
+127.0.0.2 foo4
+127.0.0.1     manywhitespaces
+   127.0.0.1 startswithwhitespace

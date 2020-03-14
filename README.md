@@ -140,7 +140,7 @@ The same as the [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_look
 ##### options.throwNotFound
 
 Type: `boolean`<br>
-Default: `false`
+Default: `true`
 
 If set to `false` and it gets no match, it will return `undefined`.
 If set to `true` and it gets no match, it will throw `ENOTFOUND` error.

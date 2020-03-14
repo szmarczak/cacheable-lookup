@@ -160,15 +160,13 @@ class CacheableLookup {
 		}
 
 		if (cached.length === 0) {
-			if (throwNotFound || options.throwNotFound) {
+			if (throwNotFound || options.throwNotFound !== false) {
 				const error = new Error(`ENOTFOUND ${hostname}`);
 				error.code = 'ENOTFOUND';
 				error.hostname = hostname;
 
 				throw error;
 			}
-
-			return undefined;
 		}
 
 		if (options.all) {
