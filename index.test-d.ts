@@ -1,5 +1,5 @@
 import {expectType} from 'tsd';
-import Keyv from 'keyv';
+import Keyv = require('keyv');
 import CacheableLookup, {EntryObject} from '.';
 
 (async () => {
