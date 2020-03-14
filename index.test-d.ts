@@ -1,8 +1,13 @@
 import {expectType} from 'tsd';
+import Keyv from 'keyv';
 import CacheableLookup, {EntryObject} from '.';
 
 (async () => {
 	const cacheable = new CacheableLookup();
+
+	new CacheableLookup({
+		cache: new Keyv()
+	});
 
 	expectType<string[]>(cacheable.servers);
 

@@ -4,6 +4,7 @@ const {promisify} = require('util');
 const http = require('http');
 const path = require('path');
 const test = require('ava');
+const Keyv = require('keyv');
 const proxyquire = require('proxyquire');
 const CacheableLookup = require('../source');
 
@@ -806,4 +807,28 @@ test('the `hosts` file support can be turned off', async t => {
 
 	const {address} = await cacheable.lookupAsync('localhost');
 	t.is(address, '127.0.0.1');
+});
+
+test('custom cache support', async t => {
+	const cache = new Keyv();
+
+	const cacheable = new CacheableLookup({
+		customHostsPath: false,
+		resolver,
+		cache
+	});
+
+	await cacheable.lookupAsync('temporary');
+
+	const [entry] = await cache.get('temporary');
+
+	t.is(entry.address, '127.0.0.1');
+	t.is(entry.family, 4);
+	t.is(entry.ttl, 1);
+
+	await sleep(entry.ttl * 1000);
+
+	const newEntry = await cache.get('temporary');
+
+	t.is(newEntry, undefined);
 });

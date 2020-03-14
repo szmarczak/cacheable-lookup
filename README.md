@@ -43,6 +43,11 @@ http.get('https://example.com', response => {
 
 Returns a new instance of `CacheableLookup`.
 
+#### cache
+
+Type: [`TTLMap`](index.d.ts)<br>
+Default: `new TTLMap()`
+
 #### options
 
 Type: `object`<br>

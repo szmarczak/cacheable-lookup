@@ -75,7 +75,7 @@ class TTLMap {
 
 	delete(key) {
 		this.values.delete(key);
-		this.expiries.delete(key);
+		return this.expiries.delete(key);
 	}
 
 	clear() {
@@ -91,11 +91,16 @@ class TTLMap {
 const ttl = {ttl: true};
 
 class CacheableLookup {
-	constructor({maxTtl = Infinity, resolver, customHostsPath} = {}) {
+	constructor({
+		cache = new TTLMap(),
+		maxTtl = Infinity,
+		resolver = new AsyncResolver(),
+		customHostsPath
+	} = {}) {
 		this.maxTtl = maxTtl;
 
-		this._cache = new TTLMap();
-		this._resolver = resolver || new AsyncResolver();
+		this._cache = cache;
+		this._resolver = resolver;
 
 		if (this._resolver instanceof AsyncResolver) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
@@ -181,7 +186,7 @@ class CacheableLookup {
 	}
 
 	async query(hostname) {
-		let cached = this._hostsResolver.hosts[hostname] || this._cache.get(hostname);
+		let cached = this._hostsResolver.hosts[hostname] || await this._cache.get(hostname);
 
 		if (!cached || cached.length === 0) {
 			cached = await this.queryAndCache(hostname);
@@ -223,7 +228,7 @@ class CacheableLookup {
 		cacheTtl = Math.min(this.maxTtl, cacheTtl) * 1000;
 
 		if (this.maxTtl > 0 && cacheTtl > 0) {
-			this._cache.set(hostname, entries, cacheTtl);
+			await this._cache.set(hostname, entries, cacheTtl);
 		}
 
 		return entries;
@@ -238,11 +243,13 @@ class CacheableLookup {
 			return;
 		}
 
-		const now = Date.now();
+		if (this._cache instanceof TTLMap) {
+			const now = Date.now();
 
-		for (const [hostname, expiry] of this._cache.expiries) {
-			if (now > expiry) {
-				this._cache.delete(hostname);
+			for (const [hostname, expiry] of this._cache.expiries) {
+				if (now > expiry) {
+					this._cache.delete(hostname);
+				}
 			}
 		}
 
