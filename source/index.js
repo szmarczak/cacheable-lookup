@@ -181,25 +181,7 @@ class CacheableLookup {
 	}
 
 	async query(hostname) {
-		let cached = this._hostsResolver.hosts[hostname];
-
-		if (!cached) {
-			cached = this._cache.get(hostname);
-
-			if (cached) {
-				const now = Date.now();
-
-				for (let index = 0; index < cached.length;) {
-					const entry = cached[index];
-
-					if (now >= entry.expires || entry.ttl === 0) {
-						cached.splice(index, 1);
-					} else {
-						index++;
-					}
-				}
-			}
-		}
+		let cached = this._hostsResolver.hosts[hostname] || this._cache.get(hostname);
 
 		if (!cached || cached.length === 0) {
 			cached = await this.queryAndCache(hostname);

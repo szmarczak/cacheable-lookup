@@ -2,9 +2,10 @@ const {V4MAPPED, ADDRCONFIG} = require('dns');
 const {Resolver: AsyncResolver} = require('dns').promises;
 const {promisify} = require('util');
 const http = require('http');
+const path = require('path');
 const test = require('ava');
 const proxyquire = require('proxyquire');
-const CacheableLookup = require('.');
+const CacheableLookup = require('../source');
 
 const makeRequest = options => new Promise((resolve, reject) => {
 	http.get(options, resolve).once('error', reject);
@@ -55,7 +56,7 @@ const mockedInterfaces = options => {
 		interfaces = createInterfaces(options);
 	};
 
-	const result = proxyquire('.', {
+	const result = proxyquire('../source', {
 		os: {
 			networkInterfaces: () => interfaces
 		}
@@ -389,13 +390,6 @@ test('options.throwNotFound', async t => {
 	await t.throwsAsync(cacheable.lookupAsync('static4', {family: 6}), {code: 'ENOTFOUND'});
 });
 
-// eslint-disable-next-line ava/no-skip-test
-test.skip('passes errors', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
-
-	await t.throwsAsync(cacheable.lookupAsync('undefined'), {message: 'no entry'});
-});
-
 test('custom servers', async t => {
 	const cacheable = new CacheableLookup({resolver: createResolver(), customHostsPath: false});
 
@@ -717,7 +711,7 @@ test.serial('double tick() has no effect', async t => {
 
 test('respects the `hosts` file', async t => {
 	const cacheable = new CacheableLookup({
-		customHostsPath: './hosts.txt'
+		customHostsPath: path.resolve(__dirname, 'hosts.txt')
 	});
 
 	await sleep(100);

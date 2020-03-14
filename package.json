@@ -8,9 +8,10 @@
   "files": [
     "source"
   ],
-  "main": "source/index.js",
+	"main": "source/index.js",
+	"types": "source/index.d.ts",
   "scripts": {
-    "test": "xo && nyc ava && tsd"
+    "test": "xo && nyc ava"
   },
   "repository": {
     "type": "git",
