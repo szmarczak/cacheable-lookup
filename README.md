@@ -45,8 +45,12 @@ Returns a new instance of `CacheableLookup`.
 
 #### cache
 
-Type: [`TTLMap`](index.d.ts)<br>
+Type: [`TTLMap`](index.d.ts) | [`Keyv`](https://github.com/lukechilds/keyv/)<br>
 Default: `new TTLMap()`
+
+Custom cache instance. If `undefined`, it will create a new one.
+
+**Note**: If you decide to use Keyv instead of the native implementation, the performance will drop by 10x. Memory leaks may occur as it doesn't provide any way to remove all the deprecated values at once.
 
 #### options
 

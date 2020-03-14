@@ -15,7 +15,7 @@ export interface CacheInstance {
 
 export interface Options {
 	/**
-	 * Cache instance. If `undefined`, it will create a new one.
+	 * Custom cache instance. If `undefined`, it will create a new one.
 	 * @default undefined
 	 */
 	cache?: CacheInstance;
