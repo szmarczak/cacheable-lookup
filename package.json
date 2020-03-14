@@ -6,12 +6,13 @@
     "node": ">=10"
   },
   "files": [
-    "source"
+    "source",
+    "index.d.ts"
   ],
 	"main": "source/index.js",
-	"types": "source/index.d.ts",
+	"types": "index.d.ts",
   "scripts": {
-    "test": "xo && nyc ava"
+    "test": "xo && nyc ava && tsd"
   },
   "repository": {
     "type": "git",
