@@ -563,6 +563,8 @@ test.serial('install & uninstall', async t => {
 	await t.throwsAsync(makeRequest(options), {
 		message: /^getaddrinfo ENOTFOUND example/
 	});
+
+	http.globalAgent.destroy();
 });
 
 test('`.install()` throws if no Agent provided', t => {
@@ -831,4 +833,43 @@ test('custom cache support', async t => {
 	const newEntry = await cache.get('temporary');
 
 	t.is(newEntry, undefined);
+});
+
+test('travis hosts', async t => {
+	const resolver = createResolver();
+	resolver.data = {};
+
+	const cacheable = new CacheableLookup({
+		customHostsPath: path.resolve(__dirname, 'travisHosts.txt'),
+		resolver
+	});
+
+	await sleep(10);
+
+	const entry = await cacheable.lookupAsync('localhost');
+
+	t.deepEqual(entry, {
+		address: '127.0.0.1',
+		expires: Infinity,
+		family: 4,
+		ttl: Infinity
+	});
+});
+
+test('lookup throws if failed to retrieve the `hosts` file', async t => {
+	const resolver = createResolver();
+	resolver.data = {};
+
+	const cacheable = new CacheableLookup({
+		customHostsPath: path.resolve(__dirname, 'doesNotExist.txt'),
+		resolver
+	});
+
+	await t.throwsAsync(
+		cacheable.lookupAsync('localhost'),
+		{
+			code: 'ENOENT',
+			message: /^ENOENT: no such file or directory/
+		}
+	);
 });

@@ -2,7 +2,7 @@
 const {V4MAPPED, ADDRCONFIG, promises: dnsPromises} = require('dns');
 const {promisify} = require('util');
 const os = require('os');
-const createHostsResolver = require('./create-hosts-resolver');
+const HostsResolver = require('./hosts-resolver');
 
 const {Resolver: AsyncResolver} = dnsPromises;
 
@@ -111,10 +111,8 @@ class CacheableLookup {
 		}
 
 		this._iface = getIfaceInfo();
+		this._hostsResolver = new HostsResolver(customHostsPath);
 		this._tickLocked = false;
-		this._hostsResolver = createHostsResolver(customHostsPath);
-
-		this.tick();
 
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
@@ -186,7 +184,7 @@ class CacheableLookup {
 	}
 
 	async query(hostname) {
-		let cached = this._hostsResolver.hosts[hostname] || await this._cache.get(hostname);
+		let cached = await this._hostsResolver.get(hostname) || await this._cache.get(hostname);
 
 		if (!cached || cached.length === 0) {
 			cached = await this.queryAndCache(hostname);
@@ -253,7 +251,7 @@ class CacheableLookup {
 			}
 		}
 
-		this._hostsResolver.updateHosts();
+		this._hostsResolver.update();
 
 		this._tickLocked = true;
 
@@ -301,6 +299,7 @@ class CacheableLookup {
 
 	updateInterfaceInfo() {
 		this._iface = getIfaceInfo();
+		this._hostsResolver.update();
 		this._cache.clear();
 	}
 

@@ -1,0 +1,5 @@
+## Managed by Chef on packer-5c98fea1-aa3f-407c-10e9-32c3c213ffca.c.eco-emissary-99515.internal :heart_eyes_cat:
+## cookbook:: travis_build_environment
+##     file:: templates/default/etc/cloud/templates/hosts.tmpl.erb
+127.0.1.1 travis-job-e777c4e7-efdd-4a08-a20f-d25703d8702f travis-job-e777c4e7-efdd-4a08-a20f-d25703d8702f ip4-loopback xenial64
+127.0.0.1 localhost nettuno travis vagrant travis-job-e777c4e7-efdd-4a08-a20f-d25703d8702f
