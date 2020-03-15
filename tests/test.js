@@ -676,6 +676,18 @@ test('tick() works', async t => {
 	t.is(cacheable._cache.size, 0);
 });
 
+test('tick() doesn\'t delete active entries', async t => {
+	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+
+	await cacheable.lookupAsync('temporary');
+	t.is(cacheable._cache.size, 1);
+
+	await sleep(500);
+
+	cacheable.tick();
+	t.is(cacheable._cache.size, 1);
+});
+
 test('tick() is locked for 1s', async t => {
 	const cacheable = new CacheableLookup();
 
@@ -829,6 +841,8 @@ test('custom cache support', async t => {
 	t.is(entry.ttl, 1);
 
 	await sleep(entry.ttl * 1000);
+
+	cacheable.tick();
 
 	const newEntry = await cache.get('temporary');
 
