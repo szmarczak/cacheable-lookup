@@ -24,36 +24,44 @@ const lookupOptionsADDRCONFIG = {
 	hints: dns.ADDRCONFIG
 };
 
+const query = 'example.com';
+
 suite.add('CacheableLookup#lookupAsync', deferred => {
 	// eslint-disable-next-line promise/prefer-await-to-then
-	cacheable.lookupAsync('localhost').then(() => deferred.resolve());
+	cacheable.lookupAsync(query).then(() => deferred.resolve());
 }, options).add('CacheableLookup#lookupAsync.all', deferred => {
 	// eslint-disable-next-line promise/prefer-await-to-then
-	cacheable.lookupAsync('localhost', lookupOptions).then(() => deferred.resolve());
+	cacheable.lookupAsync(query, lookupOptions).then(() => deferred.resolve());
 }, options).add('CacheableLookup#lookupAsync.all.ADDRCONFIG', deferred => {
 	// eslint-disable-next-line promise/prefer-await-to-then
-	cacheable.lookupAsync('localhost', lookupOptionsADDRCONFIG).then(() => deferred.resolve());
+	cacheable.lookupAsync(query, lookupOptionsADDRCONFIG).then(() => deferred.resolve());
 }, options).add('CacheableLookup#lookup', deferred => {
-	cacheable.lookup('localhost', lookupOptions, () => deferred.resolve());
+	cacheable.lookup(query, lookupOptions, () => deferred.resolve());
 }, options).add('CacheableLookup#lookup.all', deferred => {
-	cacheable.lookup('localhost', lookupOptions, () => deferred.resolve());
+	cacheable.lookup(query, lookupOptions, () => deferred.resolve());
 }, options).add('CacheableLookup#lookup.all.ADDRCONFIG', deferred => {
-	cacheable.lookup('localhost', lookupOptionsADDRCONFIG, () => deferred.resolve());
+	cacheable.lookup(query, lookupOptionsADDRCONFIG, () => deferred.resolve());
 }, options).add('CacheableLookup#lookupAsync - zero TTL', deferred => {
 	// eslint-disable-next-line promise/prefer-await-to-then
-	notCacheable.lookupAsync('localhost', lookupOptions).then(() => deferred.resolve());
+	notCacheable.lookupAsync(query, lookupOptions).then(() => deferred.resolve());
 }, options).add('CacheableLookup#lookup - zero TTL', deferred => {
-	notCacheable.lookup('localhost', lookupOptions, () => deferred.resolve());
+	notCacheable.lookup(query, lookupOptions, () => deferred.resolve());
 }, options).add('dns#resolve4', deferred => {
-	dns.resolve4('localhost', resolve4Options, () => deferred.resolve());
+	dns.resolve4(query, resolve4Options, () => deferred.resolve());
 }, options).add('dns#lookup', deferred => {
-	dns.lookup('localhost', () => deferred.resolve());
+	dns.lookup(query, () => deferred.resolve());
 }, options).add('dns#lookup.all', deferred => {
-	dns.lookup('localhost', lookupOptions, () => deferred.resolve());
+	dns.lookup(query, lookupOptions, () => deferred.resolve());
 }, options).add('dns#lookup.all.ADDRCONFIG', deferred => {
-	dns.lookup('localhost', lookupOptionsADDRCONFIG, () => deferred.resolve());
+	dns.lookup(query, lookupOptionsADDRCONFIG, () => deferred.resolve());
 }, options).on('cycle', event => {
 	console.log(String(event.target));
 }).on('complete', function () {
 	console.log(`Fastest is ${this.filter('fastest').map('name')}`);
-}).run({async: true});
+});
+
+(async () => {
+	await cacheable.lookupAsync(query);
+
+	suite.run();
+})();

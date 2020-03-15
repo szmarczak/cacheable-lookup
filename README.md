@@ -188,15 +188,18 @@ Clears the cache.
 
 ## High performance
 
-See the benchmarks (queries `localhost`, performed on i7-7700k):
+Performed on:
+- Query: `example.com`
+- CPU: i7-7700k
+- CPU governor: performance
 
 ```
-CacheableLookup#lookupAsync                x 4,095,922 ops/sec ±1.01%  (84 runs sampled)
-CacheableLookup#lookupAsync.all            x 4,472,817 ops/sec ±0.67%  (88 runs sampled)
-CacheableLookup#lookupAsync.all.ADDRCONFIG x 3,713,702 ops/sec ±0.66%  (85 runs sampled)
-CacheableLookup#lookup                     x 3,332,170 ops/sec ±0.50%  (82 runs sampled)
-CacheableLookup#lookup.all                 x 3,303,159 ops/sec ±0.61%  (84 runs sampled)
-CacheableLookup#lookup.all.ADDRCONFIG      x 2,851,815 ops/sec ±0.82%  (84 runs sampled)
+CacheableLookup#lookupAsync                x 2,024,888 ops/sec ±0.84%  (87 runs sampled)
+CacheableLookup#lookupAsync.all            x 2,093,860 ops/sec ±1.00%  (88 runs sampled)
+CacheableLookup#lookupAsync.all.ADDRCONFIG x 1,898,088 ops/sec ±0.61%  (89 runs sampled)
+CacheableLookup#lookup                     x 1,905,060 ops/sec ±0.76%  (90 runs sampled)
+CacheableLookup#lookup.all                 x 1,889,284 ops/sec ±1.37%  (87 runs sampled)
+CacheableLookup#lookup.all.ADDRCONFIG      x 1,740,616 ops/sec ±0.83%  (89 runs sampled)
 CacheableLookup#lookupAsync - zero TTL     x 226       ops/sec ±3.55%  (56 runs sampled)
 CacheableLookup#lookup      - zero TTL     x 228       ops/sec ±2.48%  (62 runs sampled)
 dns#resolve4                               x 346       ops/sec ±3.58%  (55 runs sampled)
