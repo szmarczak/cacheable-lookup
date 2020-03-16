@@ -487,7 +487,7 @@ test('options.maxTtl', async t => {
 		resolver.data['127.0.0.1'].maxTtl[0].address = '127.0.0.2';
 
 		// Wait until it expires
-		await sleep(10);
+		await sleep(1);
 
 		// Lookup again
 		verify(t, await cacheable.lookupAsync('maxTtl'), {
@@ -691,19 +691,20 @@ test('tick() doesn\'t delete active entries', async t => {
 test('tick() is locked for 1s', async t => {
 	const cacheable = new CacheableLookup();
 
-	await sleep(1000);
-
 	cacheable.tick();
 	t.true(cacheable._tickLocked);
 
-	await sleep(1000);
+	const sleepPromise = sleep(1000);
+
+	await sleep(800);
+	t.true(cacheable._tickLocked);
+
+	await sleepPromise;
 	t.false(cacheable._tickLocked);
 });
 
-test.serial('double tick() has no effect', async t => {
+test.serial('double tick() has no effect', t => {
 	const cacheable = new CacheableLookup();
-
-	await sleep(1000);
 
 	const _setTimeout = setTimeout;
 	global.setTimeout = (...args) => {
@@ -728,8 +729,6 @@ test('respects the `hosts` file', async t => {
 	const cacheable = new CacheableLookup({
 		customHostsPath: path.resolve(__dirname, 'hosts.txt')
 	});
-
-	await sleep(100);
 
 	const getAddress = async hostname => {
 		const result = await cacheable.lookupAsync(hostname, {throwNotFound: false});
@@ -789,8 +788,6 @@ test('the `hosts` file support can be turned off', async t => {
 		customHostsPath: false,
 		resolver
 	});
-
-	await sleep(100);
 
 	const getAddress = async hostname => {
 		const result = await cacheable.lookupAsync(hostname, {throwNotFound: false});
@@ -857,8 +854,6 @@ test('travis hosts', async t => {
 		customHostsPath: path.resolve(__dirname, 'travisHosts.txt'),
 		resolver
 	});
-
-	await sleep(10);
 
 	const entry = await cacheable.lookupAsync('localhost');
 
