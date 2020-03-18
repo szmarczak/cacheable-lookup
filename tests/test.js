@@ -561,7 +561,7 @@ test.serial('install & uninstall', async t => {
 	cacheable.uninstall(http.globalAgent);
 
 	await t.throwsAsync(makeRequest(options), {
-		message: /^getaddrinfo ENOTFOUND example/
+		message: /^getaddrinfo (?:ENOTFOUND|EAI_AGAIN) example/
 	});
 
 	http.globalAgent.destroy();

@@ -12,7 +12,7 @@
   "main": "source/index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "xo && nyc ava && tsd"
+    "test": "xo && nyc --reporter=lcovonly --reporter=text ava && tsd"
   },
   "repository": {
     "type": "git",
