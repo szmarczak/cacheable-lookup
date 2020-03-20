@@ -30,8 +30,10 @@
     "url": "https://github.com/szmarczak/cacheable-lookup/issues"
   },
   "homepage": "https://github.com/szmarczak/cacheable-lookup#readme",
+  "dependencies": {
+    "@types/keyv": "^3.1.1"
+  },
   "devDependencies": {
-    "@types/keyv": "^3.1.1",
     "ava": "^3.1.0",
     "benchmark": "^2.1.4",
     "coveralls": "^3.0.9",
