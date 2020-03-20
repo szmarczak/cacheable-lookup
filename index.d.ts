@@ -1,4 +1,3 @@
-import Keyv = require('keyv');
 import {Resolver, LookupAddress, promises as dnsPromises} from 'dns';
 import {Agent} from 'http';
 
