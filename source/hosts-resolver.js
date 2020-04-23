@@ -3,7 +3,7 @@ const {stat, readFile} = require('fs').promises;
 const {isIP} = require('net');
 
 const isWindows = process.platform === 'win32';
-const hostsPath = isWindows ? 'C:\\Windows\\System32\\drivers\\etc\\hosts' : '/etc/hosts';
+const hostsPath = isWindows ? `${process.env.SystemDrive}\\Windows\\System32\\drivers\\etc\\hosts` : '/etc/hosts';
 
 const hostnameRegExp = /^(?:(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$/;
 const isHostname = hostname => hostnameRegExp.test(hostname);
