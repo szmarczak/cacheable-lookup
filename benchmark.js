@@ -24,12 +24,12 @@ const lookupOptionsADDRCONFIG = {
 	hints: dns.ADDRCONFIG
 };
 
-const query = 'example.com';
+const query = 'short';
 
 suite.add('CacheableLookup#lookupAsync', deferred => {
 	// eslint-disable-next-line promise/prefer-await-to-then
 	cacheable.lookupAsync(query).then(() => deferred.resolve());
-}, options).add('CacheableLookup#lookupAsync.all', deferred => {
+}, options)/*.add('CacheableLookup#lookupAsync.all', deferred => {
 	// eslint-disable-next-line promise/prefer-await-to-then
 	cacheable.lookupAsync(query, lookupOptions).then(() => deferred.resolve());
 }, options).add('CacheableLookup#lookupAsync.all.ADDRCONFIG', deferred => {
@@ -54,7 +54,7 @@ suite.add('CacheableLookup#lookupAsync', deferred => {
 	dns.lookup(query, lookupOptions, () => deferred.resolve());
 }, options).add('dns#lookup.all.ADDRCONFIG', deferred => {
 	dns.lookup(query, lookupOptionsADDRCONFIG, () => deferred.resolve());
-}, options).on('cycle', event => {
+}, options)*/.on('cycle', event => {
 	console.log(String(event.target));
 }).on('complete', function () {
 	console.log(`Fastest is ${this.filter('fastest').map('name')}`);

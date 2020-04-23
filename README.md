@@ -64,9 +64,31 @@ Options used to cache the DNS lookups.
 Type: `number`<br>
 Default: `Infinity`
 
-Limits the cache time (TTL in seconds).
+The maximum lifetime of the entries received from the specifed DNS server (TTL in seconds).
 
 If set to `0`, it will make a new DNS query each time.
+
+##### options.fallbackTtl
+
+Type: `number`<br>
+Default: `1`
+
+The lifetime of the entries received from the OS (TTL in seconds).
+
+**Note**: This option is independent, `options.maxTtl` does not affect this.
+
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. 
+
+##### options.errorTtl
+
+Type: `number`<br>
+Default: `0.150`
+
+The time how long it needs to remember failed queries (TTL in seconds).
+
+**Note**: This option is independent, `options.maxTtl` does not affect this.
+
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. 
 
 ##### options.resolver
 
@@ -145,16 +167,6 @@ Type: `string`
 Type: `object`
 
 The same as the [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) options.
-
-##### options.throwNotFound
-
-Type: `boolean`<br>
-Default: `true`
-
-If set to `false` and it gets no match, it will return `undefined`.
-If set to `true` and it gets no match, it will throw `ENOTFOUND` error.
-
-**Note**: This option is meant **only** for the asynchronous implementation! The callback version will always pass an error if no match found.
 
 #### query(hostname)
 
