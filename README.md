@@ -45,8 +45,8 @@ Returns a new instance of `CacheableLookup`.
 
 #### cache
 
-Type: [`TTLMap`](index.d.ts) | [`Keyv`](https://github.com/lukechilds/keyv/)<br>
-Default: `new TTLMap()`
+Type: `Map` | [`Keyv`](https://github.com/lukechilds/keyv/)<br>
+Default: `new Map()`
 
 Custom cache instance. If `undefined`, it will create a new one.
 
@@ -206,18 +206,13 @@ Performed on:
 - CPU governor: performance
 
 ```
-CacheableLookup#lookupAsync                x 2,024,888 ops/sec ±0.84%  (87 runs sampled)
-CacheableLookup#lookupAsync.all            x 2,093,860 ops/sec ±1.00%  (88 runs sampled)
-CacheableLookup#lookupAsync.all.ADDRCONFIG x 1,898,088 ops/sec ±0.61%  (89 runs sampled)
-CacheableLookup#lookup                     x 1,905,060 ops/sec ±0.76%  (90 runs sampled)
-CacheableLookup#lookup.all                 x 1,889,284 ops/sec ±1.37%  (87 runs sampled)
-CacheableLookup#lookup.all.ADDRCONFIG      x 1,740,616 ops/sec ±0.83%  (89 runs sampled)
-CacheableLookup#lookupAsync - zero TTL     x 226       ops/sec ±3.55%  (56 runs sampled)
-CacheableLookup#lookup      - zero TTL     x 228       ops/sec ±2.48%  (62 runs sampled)
-dns#resolve4                               x 346       ops/sec ±3.58%  (55 runs sampled)
-dns#lookup                                 x 20,368    ops/sec ±38.31% (53 runs sampled)
-dns#lookup.all                             x 13,529    ops/sec ±31.35% (29 runs sampled)
-dns#lookup.all.ADDRCONFIG                  x 6,211     ops/sec ±22.92% (26 runs sampled)
+CacheableLookup#lookupAsync                x 2,319,803 ops/sec ±0.82% (84 runs sampled)
+CacheableLookup#lookupAsync.all            x 2,419,856 ops/sec ±0.66% (89 runs sampled)
+CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,127,545 ops/sec ±1.04% (89 runs sampled)
+CacheableLookup#lookup                     x 2,217,960 ops/sec ±1.15% (88 runs sampled)
+CacheableLookup#lookup.all                 x 2,218,162 ops/sec ±0.71% (89 runs sampled)
+CacheableLookup#lookup.all.ADDRCONFIG      x 1,998,112 ops/sec ±0.75% (88 runs sampled)
+!!! MISSING DNS.LOOKUP !!!
 Fastest is CacheableLookup#lookupAsync.all
 ```
 
