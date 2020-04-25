@@ -6,7 +6,6 @@ const path = require('path');
 const test = require('ava');
 const Keyv = require('keyv');
 const proxyquire = require('proxyquire');
-const CacheableLookup = require('../source');
 
 const makeRequest = options => new Promise((resolve, reject) => {
 	http.get(options, resolve).once('error', reject);
@@ -180,6 +179,12 @@ const createResolver = () => {
 };
 
 const resolver = createResolver();
+
+const CacheableLookup = proxyquire('../source', {
+	dns: {
+		lookup: resolver.lookup
+	}
+});
 
 const verify = (t, entry, value) => {
 	if (Array.isArray(value)) {
@@ -917,7 +922,6 @@ test('lookup throws if failed to retrieve the `hosts` file', async t => {
 
 test('fallback works', async t => {
 	const cacheable = new CacheableLookup({resolver, customHostsPath: false, fallbackTtl: 1});
-	cacheable._lookup = promisify(resolver.lookup.bind(resolver));
 
 	const entries = await cacheable.lookupAsync('osHostname', {all: true});
 	t.is(entries.length, 2);
@@ -939,7 +943,6 @@ test('fallback works', async t => {
 
 test('errors are cached', async t => {
 	const cacheable = new CacheableLookup({resolver, customHostsPath: false, errorTtl: 0.1});
-	cacheable._lookup = promisify(resolver.lookup.bind(resolver));
 
 	await t.throwsAsync(cacheable.lookupAsync('doesNotExist'), {
 		code: 'ENOTFOUND'
