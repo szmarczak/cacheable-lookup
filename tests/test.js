@@ -302,7 +302,7 @@ test('V4MAPPED hint', async t => {
 	await t.throwsAsync(cacheable.lookupAsync('static4', {family: 6}), {code: 'ENOTFOUND'});
 
 	// V4MAPPED
-	entries = await cacheable.lookupAsync('static4', {family: 6, hints: V4MAPPED});
+	const entries = await cacheable.lookupAsync('static4', {family: 6, hints: V4MAPPED});
 	verify(t, entries, {address: '::ffff:127.0.0.1', family: 6});
 });
 

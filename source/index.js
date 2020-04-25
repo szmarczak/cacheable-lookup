@@ -95,12 +95,12 @@ const ttl = {ttl: true};
 
 class CacheableLookup {
 	constructor({
+		customHostsPath,
 		cache = new TTLMap(),
 		maxTtl = Infinity,
 		resolver = new AsyncResolver(),
 		fallbackTtl = 1,
-		errorTtl = 0.150,
-		customHostsPath
+		errorTtl = 0.15
 	} = {}) {
 		this.maxTtl = maxTtl;
 		this.fallbackTtl = fallbackTtl;
@@ -135,9 +135,11 @@ class CacheableLookup {
 		return this._resolver.getServers();
 	}
 
-	lookup(hostname, options = {}, callback) {
+	lookup(hostname, options, callback) {
 		if (typeof options === 'function') {
 			callback = options;
+			options = {};
+		} else if (!options) {
 			options = {};
 		}
 
@@ -263,6 +265,7 @@ class CacheableLookup {
 		return entries;
 	}
 
+	// eslint-disable-next-line no-unused-vars
 	_getEntry(entries, hostname) {
 		return entries[Math.floor(Math.random() * entries.length)];
 	}
