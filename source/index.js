@@ -1,13 +1,15 @@
 'use strict';
-const {V4MAPPED, ADDRCONFIG, promises: dnsPromises} = require('dns');
+const {
+	V4MAPPED,
+	ADDRCONFIG,
+	promises: {
+		Resolver: AsyncResolver
+	},
+	lookup
+} = require('dns');
 const {promisify} = require('util');
 const os = require('os');
 const HostsResolver = require('./hosts-resolver');
-
-const {
-	Resolver: AsyncResolver,
-	lookup: dnsPromiseLookup
-} = dnsPromises;
 
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
@@ -65,8 +67,13 @@ class CacheableLookup {
 		this.fallbackTtl = fallbackTtl;
 		this.errorTtl = errorTtl;
 
+		// This value is in milliseconds
+		this._lockTime = Math.max(Math.floor(Math.min(this.fallbackTtl * 1000, this.errorTtl * 1000)), 10);
+
 		this._cache = cache;
 		this._resolver = resolver;
+
+		this._lookup = promisify(lookup);
 
 		if (this._resolver instanceof AsyncResolver) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
@@ -98,8 +105,10 @@ class CacheableLookup {
 		if (typeof options === 'function') {
 			callback = options;
 			options = {};
-		} else if (!options) {
-			options = {};
+		}
+
+		if (!callback) {
+			throw new Error('Callback must be a function.');
 		}
 
 		// eslint-disable-next-line promise/prefer-await-to-then
@@ -172,12 +181,11 @@ class CacheableLookup {
 		const [As, AAAAs] = await Promise.all([this._resolve4(hostname, ttl).catch(() => []), this._resolve6(hostname, ttl).catch(() => [])]);
 
 		let cacheTtl = 0;
-		const now = Date.now();
 
 		if (As) {
 			for (const entry of As) {
 				entry.family = 4;
-				entry.expires = now + (entry.ttl * 1000);
+				entry.expires = Date.now() + (entry.ttl * 1000);
 
 				// Is TTL the same for all entries?
 				cacheTtl = Math.max(cacheTtl, entry.ttl);
@@ -187,7 +195,7 @@ class CacheableLookup {
 		if (AAAAs) {
 			for (const entry of AAAAs) {
 				entry.family = 6;
-				entry.expires = now + (entry.ttl * 1000);
+				entry.expires = Date.now() + (entry.ttl * 1000);
 
 				// Is TTL the same for all entries?
 				cacheTtl = Math.max(cacheTtl, entry.ttl);
@@ -198,20 +206,20 @@ class CacheableLookup {
 
 		if (entries.length === 0) {
 			try {
-				entries = await dnsPromiseLookup(hostname, {
+				entries = await this._lookup(hostname, {
 					all: true
 				});
 
 				for (const entry of entries) {
 					entry.ttl = this.fallbackTtl;
-					entry.expires = now + (entry.ttl * 1000);
+					entry.expires = Date.now() + (entry.ttl * 1000);
 				}
 
 				cacheTtl = this.fallbackTtl * 1000;
 			} catch (error) {
 				cacheTtl = this.errorTtl * 1000;
 
-				entries.expires = cacheTtl;
+				entries.expires = Date.now() + cacheTtl;
 				await this._cache.set(hostname, entries, cacheTtl);
 
 				throw error;
@@ -221,7 +229,7 @@ class CacheableLookup {
 		}
 
 		if (this.maxTtl > 0 && cacheTtl > 0) {
-			entries.expires = cacheTtl;
+			entries.expires = Date.now() + cacheTtl;
 			await this._cache.set(hostname, entries, cacheTtl);
 		}
 
@@ -242,7 +250,7 @@ class CacheableLookup {
 			const now = Date.now();
 
 			for (const [hostname, {expires}] of this._cache) {
-				if (now > expires) {
+				if (now >= expires) {
 					this._cache.delete(hostname);
 				}
 			}
@@ -252,7 +260,7 @@ class CacheableLookup {
 
 		setTimeout(() => {
 			this._tickLocked = false;
-		}, 1000).unref();
+		}, this._lockTime).unref();
 	}
 
 	install(agent) {

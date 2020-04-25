@@ -77,18 +77,18 @@ The lifetime of the entries received from the OS (TTL in seconds).
 
 **Note**: This option is independent, `options.maxTtl` does not affect this.
 
-**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks.
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. For example, if you use Cloudflare, this value should be greater than `0.01`.
 
 ##### options.errorTtl
 
 Type: `number`<br>
-Default: `0.150`
+Default: `0.15`
 
 The time how long it needs to remember failed queries (TTL in seconds).
 
 **Note**: This option is independent, `options.maxTtl` does not affect this.
 
-**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks.
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. For example, if you use Cloudflare, this value should be greater than `0.01`.
 
 ##### options.resolver
 
@@ -186,7 +186,7 @@ Returns an array of objects with `address`, `family`, `ttl` and `expires` proper
 
 #### tick()
 
-Removes outdated entries. It's automatically called on every lookup with a 1s lock.
+Removes outdated entries. It's automatically called on every lookup.
 
 #### updateInterfaceInfo()
 

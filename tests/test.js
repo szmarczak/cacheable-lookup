@@ -127,10 +127,11 @@ const createResolver = () => {
 			}
 
 			if (options.all) {
-				return entries;
+				callback(null, entries);
+				return;
 			}
 
-			return entries[0];
+			callback(null, entries[0]);
 		},
 		data: {
 			'127.0.0.1': {
@@ -402,7 +403,7 @@ test('respects ttl', async t => {
 	resolverEntry.address = '127.0.0.2';
 
 	// Wait until it expires
-	await sleep(2000);
+	await sleep((resolverEntry.ttl * 1000) + 1);
 
 	// Lookup again
 	entries = await cacheable.lookupAsync('ttl', {all: true, family: 4});
@@ -487,10 +488,11 @@ test('options.maxTtl', async t => {
 		});
 
 		// Update DNS data
-		resolver.data['127.0.0.1'].maxTtl[0].address = '127.0.0.2';
+		const resolverEntry = resolver.data['127.0.0.1'].maxTtl[0];
+		resolverEntry.address = '127.0.0.2';
 
 		// Wait until it expires
-		await sleep(2000);
+		await sleep((cacheable.maxTtl * 1000) + 1);
 
 		// Lookup again
 		verify(t, await cacheable.lookupAsync('maxTtl'), {
@@ -499,7 +501,7 @@ test('options.maxTtl', async t => {
 		});
 
 		// Reset
-		resolver.data['127.0.0.1'].maxTtl[0].address = '127.0.0.1';
+		resolverEntry.address = '127.0.0.1';
 	}
 
 	//=> maxTtl = 0
@@ -513,10 +515,11 @@ test('options.maxTtl', async t => {
 		});
 
 		// Update DNS data
-		resolver.data['127.0.0.1'].maxTtl[0].address = '127.0.0.2';
+		const resolverEntry = resolver.data['127.0.0.1'].maxTtl[0];
+		resolverEntry.address = '127.0.0.2';
 
 		// Wait until it expires
-		await sleep(1);
+		await sleep((cacheable.maxTtl * 1000) + 1);
 
 		// Lookup again
 		verify(t, await cacheable.lookupAsync('maxTtl'), {
@@ -525,7 +528,7 @@ test('options.maxTtl', async t => {
 		});
 
 		// Reset
-		resolver.data['127.0.0.1'].maxTtl[0].address = '127.0.0.1';
+		resolverEntry.address = '127.0.0.1';
 	}
 });
 
@@ -567,6 +570,10 @@ test('.lookup() and .lookupAsync() are automatically bounded', async t => {
 
 	await t.notThrowsAsync(cacheable.lookupAsync('localhost'));
 	await t.notThrowsAsync(promisify(cacheable.lookup)('localhost'));
+
+	t.throws(() => cacheable.lookup('localhost'), {
+		message: 'Callback must be a function.'
+	});
 });
 
 test('works (Internet connection)', async t => {
@@ -600,7 +607,7 @@ test.serial('install & uninstall', async t => {
 });
 
 test('`.install()` throws if no Agent provided', t => {
-	const cacheable = new CacheableLookup();
+	const cacheable = new CacheableLookup({customHostsPath: false});
 
 	t.throws(() => cacheable.install(), {
 		message: 'Expected an Agent instance as the first argument'
@@ -612,7 +619,7 @@ test('`.install()` throws if no Agent provided', t => {
 });
 
 test('`.uninstall()` throws if no Agent provided', t => {
-	const cacheable = new CacheableLookup();
+	const cacheable = new CacheableLookup({customHostsPath: false});
 
 	t.throws(() => cacheable.uninstall(), {
 		message: 'Expected an Agent instance as the first argument'
@@ -624,7 +631,7 @@ test('`.uninstall()` throws if no Agent provided', t => {
 });
 
 test.serial('`.uninstall()` does not alter unmodified Agents', t => {
-	const cacheable = new CacheableLookup();
+	const cacheable = new CacheableLookup({customHostsPath: false});
 	const {createConnection} = http.globalAgent;
 
 	cacheable.uninstall(http.globalAgent);
@@ -633,7 +640,7 @@ test.serial('`.uninstall()` does not alter unmodified Agents', t => {
 });
 
 test.serial('throws if double-installing CacheableLookup', t => {
-	const cacheable = new CacheableLookup();
+	const cacheable = new CacheableLookup({customHostsPath: false});
 
 	cacheable.install(http.globalAgent);
 	t.throws(() => cacheable.install(http.globalAgent), {
@@ -663,7 +670,7 @@ test.serial('install - providing custom lookup function anyway', async t => {
 });
 
 test.serial('throws when calling `.uninstall()` on the wrong instance', t => {
-	const a = new CacheableLookup();
+	const a = new CacheableLookup({customHostsPath: false});
 	const b = new CacheableLookup({resolver, customHostsPath: false});
 
 	a.install(http.globalAgent);
@@ -702,7 +709,7 @@ test('tick() works', async t => {
 	await cacheable.lookupAsync('temporary');
 	t.is(cacheable._cache.size, 1);
 
-	await sleep(1001);
+	await sleep((resolver.data['127.0.0.1'].temporary[0].ttl * 1000) + 1);
 
 	cacheable.tick();
 	t.is(cacheable._cache.size, 0);
@@ -710,25 +717,26 @@ test('tick() works', async t => {
 
 test('tick() doesn\'t delete active entries', async t => {
 	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	cacheable.tick();
 
 	await cacheable.lookupAsync('temporary');
 	t.is(cacheable._cache.size, 1);
 
-	await sleep(500);
+	await sleep((cacheable._lockTime) + 1);
 
 	cacheable.tick();
 	t.is(cacheable._cache.size, 1);
 });
 
-test('tick() is locked for 1s', async t => {
-	const cacheable = new CacheableLookup();
+test('tick() works properly', async t => {
+	const cacheable = new CacheableLookup({customHostsPath: false});
 
 	cacheable.tick();
 	t.true(cacheable._tickLocked);
 
-	const sleepPromise = sleep(1000);
+	const sleepPromise = sleep((cacheable._lockTime) + 1);
 
-	await sleep(800);
+	await sleep((cacheable._lockTime) - 10);
 	t.true(cacheable._tickLocked);
 
 	await sleepPromise;
@@ -736,7 +744,7 @@ test('tick() is locked for 1s', async t => {
 });
 
 test.serial('double tick() has no effect', t => {
-	const cacheable = new CacheableLookup();
+	const cacheable = new CacheableLookup({customHostsPath: false});
 
 	const _setTimeout = setTimeout;
 	global.setTimeout = (...args) => {
@@ -905,4 +913,43 @@ test('lookup throws if failed to retrieve the `hosts` file', async t => {
 			message: /^ENOENT: no such file or directory/
 		}
 	);
+});
+
+test('fallback works', async t => {
+	const cacheable = new CacheableLookup({resolver, customHostsPath: false, fallbackTtl: 1});
+	cacheable._lookup = promisify(resolver.lookup.bind(resolver));
+
+	const entries = await cacheable.lookupAsync('osHostname', {all: true});
+	t.is(entries.length, 2);
+
+	t.is(entries[0].address, '127.0.0.1');
+	t.is(entries[0].family, 4);
+
+	t.is(entries[1].address, '127.0.0.2');
+	t.is(entries[1].family, 4);
+
+	t.is(cacheable._cache.size, 1);
+
+	await sleep((entries[0].ttl * 1000) + 1);
+
+	cacheable.tick();
+
+	t.is(cacheable._cache.size, 0);
+});
+
+test('errors are cached', async t => {
+	const cacheable = new CacheableLookup({resolver, customHostsPath: false, errorTtl: 0.1});
+	cacheable._lookup = promisify(resolver.lookup.bind(resolver));
+
+	await t.throwsAsync(cacheable.lookupAsync('doesNotExist'), {
+		code: 'ENOTFOUND'
+	});
+
+	t.is(cacheable._cache.size, 1);
+
+	await sleep((cacheable.errorTtl * 1000) + 1);
+
+	cacheable.tick();
+
+	t.is(cacheable._cache.size, 0);
 });
