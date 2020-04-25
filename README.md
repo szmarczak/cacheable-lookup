@@ -68,6 +68,8 @@ The maximum lifetime of the entries received from the specifed DNS server (TTL i
 
 If set to `0`, it will make a new DNS query each time.
 
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. For example, if you use Cloudflare, this value should be greater than `0.01`.
+
 ##### options.fallbackTtl
 
 Type: `number`<br>
