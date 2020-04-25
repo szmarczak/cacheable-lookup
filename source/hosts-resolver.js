@@ -36,14 +36,14 @@ class HostsResolver {
 				return this._hosts;
 			}
 
-			this._lastModifiedTime = mtimeMs;
-			this._hosts = {};
-
 			let lines = await readFile(_hostsPath, fileOptions);
 			lines = lines.replace(whitespaceRegExp, ' ');
 			lines = lines.replace(tabRegExp, ' ');
 			lines = lines.replace(startsWithWhitespaceRegExp, '');
 			lines = lines.split('\n');
+
+			this._lastModifiedTime = mtimeMs;
+			this._hosts = {};
 
 			for (const line of lines) {
 				const parts = line.split(' ');

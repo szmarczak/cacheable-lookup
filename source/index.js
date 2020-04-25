@@ -126,6 +126,8 @@ class CacheableLookup {
 	}
 
 	set servers(servers) {
+		this.updateInterfaceInfo();
+
 		this._resolver.setServers(servers);
 	}
 
@@ -146,7 +148,7 @@ class CacheableLookup {
 			} else {
 				callback(null, result.address, result.family, result.expires, result.ttl);
 			}
-		}).catch(callback);
+		}, callback);
 	}
 
 	async lookupAsync(hostname, options = {}) {
@@ -169,6 +171,14 @@ class CacheableLookup {
 			cached = cached.filter(entry => entry.family === 6 ? _iface.has6 : _iface.has4);
 		}
 
+		if (cached.length === 0) {
+			const error = new Error(`ENOTFOUND ${hostname}`);
+			error.code = 'ENOTFOUND';
+			error.hostname = hostname;
+
+			throw error;
+		}
+
 		if (options.all) {
 			return cached;
 		}
@@ -187,14 +197,6 @@ class CacheableLookup {
 
 		if (!cached) {
 			cached = await this.queryAndCache(hostname);
-		}
-
-		if (cached.length === 0) {
-			const error = new Error(`ENOTFOUND ${hostname}`);
-			error.code = 'ENOTFOUND';
-			error.hostname = hostname;
-
-			throw error;
 		}
 
 		cached = cached.map(entry => {
@@ -270,7 +272,7 @@ class CacheableLookup {
 			return;
 		}
 
-		if (this._cache instanceof TTLMap && this._cache.size) {
+		if (this._cache instanceof TTLMap) {
 			const now = Date.now();
 
 			for (const [hostname, expiry] of this._cache.expiries) {

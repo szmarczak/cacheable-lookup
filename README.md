@@ -77,7 +77,7 @@ The lifetime of the entries received from the OS (TTL in seconds).
 
 **Note**: This option is independent, `options.maxTtl` does not affect this.
 
-**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. 
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks.
 
 ##### options.errorTtl
 
@@ -88,7 +88,7 @@ The time how long it needs to remember failed queries (TTL in seconds).
 
 **Note**: This option is independent, `options.maxTtl` does not affect this.
 
-**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. 
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks.
 
 ##### options.resolver
 
@@ -145,7 +145,7 @@ When `options.all` is `true`, then `callback(error, entries)` is called.
 
 Type: `Array`
 
-DNS servers used to make the query. Can be overridden - then the new servers will be used.
+The DNS servers used to make queries. Can be overridden - doing so will trigger `cacheableLookup.updateInterfaceInfo()`.
 
 #### [lookup(hostname, options, callback)](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback)
 
