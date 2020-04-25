@@ -50,53 +50,12 @@ const getIfaceInfo = () => {
 	return {has4, has6};
 };
 
-class TTLMap {
-	constructor() {
-		this.values = new Map();
-		this.expiries = new Map();
-	}
-
-	set(key, value, ttl) {
-		this.values.set(key, value);
-		this.expiries.set(key, ttl && (ttl + Date.now()));
-	}
-
-	get(key) {
-		const expiry = this.expiries.get(key);
-
-		if (typeof expiry === 'number') {
-			if (Date.now() > expiry) {
-				this.values.delete(key);
-				this.expiries.delete(key);
-
-				return;
-			}
-		}
-
-		return this.values.get(key);
-	}
-
-	delete(key) {
-		this.values.delete(key);
-		return this.expiries.delete(key);
-	}
-
-	clear() {
-		this.values.clear();
-		this.expiries.clear();
-	}
-
-	get size() {
-		return this.values.size;
-	}
-}
-
 const ttl = {ttl: true};
 
 class CacheableLookup {
 	constructor({
 		customHostsPath,
-		cache = new TTLMap(),
+		cache = new Map(),
 		maxTtl = Infinity,
 		resolver = new AsyncResolver(),
 		fallbackTtl = 1,
@@ -250,7 +209,10 @@ class CacheableLookup {
 
 				cacheTtl = this.fallbackTtl * 1000;
 			} catch (error) {
-				await this._cache.set(hostname, [], this.errorTtl * 1000);
+				cacheTtl = this.errorTtl * 1000;
+
+				entries.expires = cacheTtl;
+				await this._cache.set(hostname, entries, cacheTtl);
 
 				throw error;
 			}
@@ -259,6 +221,7 @@ class CacheableLookup {
 		}
 
 		if (this.maxTtl > 0 && cacheTtl > 0) {
+			entries.expires = cacheTtl;
 			await this._cache.set(hostname, entries, cacheTtl);
 		}
 
@@ -275,17 +238,15 @@ class CacheableLookup {
 			return;
 		}
 
-		if (this._cache instanceof TTLMap) {
+		if (this._cache instanceof Map) {
 			const now = Date.now();
 
-			for (const [hostname, expiry] of this._cache.expiries) {
-				if (now > expiry) {
+			for (const [hostname, {expires}] of this._cache) {
+				if (now > expires) {
 					this._cache.delete(hostname);
 				}
 			}
 		}
-
-		this._hostsResolver.update();
 
 		this._tickLocked = true;
 
@@ -330,7 +291,6 @@ class CacheableLookup {
 
 	updateInterfaceInfo() {
 		this._iface = getIfaceInfo();
-		this._hostsResolver.update();
 		this._cache.clear();
 	}
 

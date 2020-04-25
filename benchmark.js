@@ -19,7 +19,7 @@ const lookupOptionsADDRCONFIG = {
 	hints: dns.ADDRCONFIG
 };
 
-const query = 'short';
+const query = 'example.com';
 
 suite.add('CacheableLookup#lookupAsync', deferred => {
 	// eslint-disable-next-line promise/prefer-await-to-then

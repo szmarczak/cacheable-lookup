@@ -186,7 +186,7 @@ Returns an array of objects with `address`, `family`, `ttl` and `expires` proper
 
 #### tick()
 
-Removes outdated entries.
+Removes outdated entries. It's automatically called on every lookup with a 1s lock.
 
 #### updateInterfaceInfo()
 
