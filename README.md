@@ -214,7 +214,9 @@ CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,127,545 ops/sec ±1.04% (89 runs 
 CacheableLookup#lookup                     x 2,217,960 ops/sec ±1.15% (88 runs sampled)
 CacheableLookup#lookup.all                 x 2,218,162 ops/sec ±0.71% (89 runs sampled)
 CacheableLookup#lookup.all.ADDRCONFIG      x 1,998,112 ops/sec ±0.75% (88 runs sampled)
-!!! MISSING DNS.LOOKUP !!!
+dns#lookup                                 x 7,272     ops/sec ±0.36% (86 runs sampled)
+dns#lookup.all                             x 7,249     ops/sec ±0.40% (86 runs sampled)
+dns#lookup.all.ADDRCONFIG                  x 5,693     ops/sec ±0.28% (85 runs sampled)
 Fastest is CacheableLookup#lookupAsync.all
 ```
 
