@@ -741,7 +741,9 @@ test('tick() works properly', async t => {
 
 	const sleepPromise = sleep((cacheable._lockTime) + 1);
 
-	await sleep((cacheable._lockTime) - 10);
+	// This sometimes fails on GitHub Actions on Windows
+	// I suspect it's I/O is poor
+	await sleep((cacheable._lockTime) - 15);
 	t.true(cacheable._tickLocked);
 
 	await sleepPromise;
