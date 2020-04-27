@@ -1,6 +1,6 @@
 {
   "name": "cacheable-lookup",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "A cacheable dns.lookup(…) that respects the TTL",
   "engines": {
     "node": ">=10"
