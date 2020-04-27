@@ -1,9 +1,7 @@
 import {Resolver, promises as dnsPromises} from 'dns';
 import {Agent} from 'http';
 
-export {Resolver};
-
-export type AsyncResolver = dnsPromises.Resolver;
+type AsyncResolver = dnsPromises.Resolver;
 
 export type IPFamily = 4 | 6;
 
