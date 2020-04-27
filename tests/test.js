@@ -68,6 +68,8 @@ const mockedInterfaces = options => {
 };
 
 const createResolver = () => {
+	let totalQueries = 0;
+
 	const resolver = {
 		servers: ['127.0.0.1'],
 		getServers() {
@@ -77,6 +79,8 @@ const createResolver = () => {
 			resolver.servers = [...servers];
 		},
 		resolve: (hostname, options, callback) => {
+			totalQueries++;
+
 			if (hostname === 'undefined') {
 				callback(new Error('no entry'));
 				return;
@@ -109,6 +113,8 @@ const createResolver = () => {
 		},
 		lookup: (hostname, options, callback) => {
 			// We don't need to implement hints here
+
+			totalQueries++;
 
 			if (!resolver.lookupData[hostname]) {
 				const error = new Error(`ENOTFOUND ${hostname}`);
@@ -172,6 +178,9 @@ const createResolver = () => {
 				{address: '127.0.0.1', family: 4},
 				{address: '127.0.0.2', family: 4}
 			]
+		},
+		get totalQueries() {
+			return totalQueries;
 		}
 	};
 
@@ -981,4 +990,13 @@ test('clear(hostname) works', async t => {
 	cacheable.clear('localhost');
 
 	t.is(cacheable._cache.size, 1);
+});
+
+test('prevents overloading DNS', async t => {
+	const resolver = createResolver();
+	const {lookupAsync} = new CacheableLookup({resolver, customHostsPath: false});
+
+	await Promise.all([lookupAsync('localhost'), lookupAsync('localhost')]);
+
+	t.is(resolver.totalQueries, 2);
 });

@@ -87,6 +87,8 @@ class CacheableLookup {
 		this._hostsResolver = new HostsResolver(customHostsPath);
 		this._tickLocked = false;
 
+		this._pending = {};
+
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
 	}
@@ -176,7 +178,16 @@ class CacheableLookup {
 		let cached = await this._hostsResolver.get(hostname) || await this._cache.get(hostname);
 
 		if (!cached) {
-			cached = await this.queryAndCache(hostname);
+			const pending = this._pending[hostname];
+
+			if (pending) {
+				cached = await pending;
+			} else {
+				const newPromise = this.queryAndCache(hostname);
+				this._pending[hostname] = newPromise;
+
+				cached = await newPromise;
+			}
 		}
 
 		cached = cached.map(entry => {
@@ -227,10 +238,14 @@ class CacheableLookup {
 
 				cacheTtl = this.fallbackTtl * 1000;
 			} catch (error) {
-				cacheTtl = this.errorTtl * 1000;
+				delete this._pending[hostname];
 
-				entries.expires = Date.now() + cacheTtl;
-				await this._cache.set(hostname, entries, cacheTtl);
+				if (error.code === 'ENOTFOUND') {
+					cacheTtl = this.errorTtl * 1000;
+
+					entries.expires = Date.now() + cacheTtl;
+					await this._cache.set(hostname, entries, cacheTtl);
+				}
 
 				throw error;
 			}
@@ -242,6 +257,8 @@ class CacheableLookup {
 			entries.expires = Date.now() + cacheTtl;
 			await this._cache.set(hostname, entries, cacheTtl);
 		}
+
+		delete this._pending[hostname];
 
 		return entries;
 	}

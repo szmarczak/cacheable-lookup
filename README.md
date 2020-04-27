@@ -208,12 +208,12 @@ Performed on:
 - CPU governor: performance
 
 ```
-CacheableLookup#lookupAsync                x 2,319,803 ops/sec ±0.82% (84 runs sampled)
-CacheableLookup#lookupAsync.all            x 2,419,856 ops/sec ±0.66% (89 runs sampled)
-CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,127,545 ops/sec ±1.04% (89 runs sampled)
-CacheableLookup#lookup                     x 2,217,960 ops/sec ±1.15% (88 runs sampled)
-CacheableLookup#lookup.all                 x 2,218,162 ops/sec ±0.71% (89 runs sampled)
-CacheableLookup#lookup.all.ADDRCONFIG      x 1,998,112 ops/sec ±0.75% (88 runs sampled)
+CacheableLookup#lookupAsync                x 2,441,577 ops/sec ±0.57% (87 runs sampled)
+CacheableLookup#lookupAsync.all            x 2,539,120 ops/sec ±0.48% (88 runs sampled)
+CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,228,416 ops/sec ±0.31% (88 runs sampled)
+CacheableLookup#lookup                     x 2,374,110 ops/sec ±0.29% (89 runs sampled)
+CacheableLookup#lookup.all                 x 2,311,587 ops/sec ±0.38% (88 runs sampled)
+CacheableLookup#lookup.all.ADDRCONFIG      x 2,074,475 ops/sec ±0.41% (90 runs sampled)
 dns#lookup                                 x 7,272     ops/sec ±0.36% (86 runs sampled)
 dns#lookup.all                             x 7,249     ops/sec ±0.40% (86 runs sampled)
 dns#lookup.all.ADDRCONFIG                  x 5,693     ops/sec ±0.28% (85 runs sampled)
