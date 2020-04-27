@@ -86,7 +86,7 @@ The lifetime of the entries received from the OS (TTL in seconds).
 Type: `number`<br>
 Default: `0.15`
 
-The time how long it needs to remember failed queries (TTL in seconds).
+The time how long it needs to remember queries that threw `ENOTFOUND` (TTL in seconds).
 
 **Note**: This option is independent, `options.maxTtl` does not affect this.
 
