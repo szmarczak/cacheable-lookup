@@ -45,8 +45,8 @@ Returns a new instance of `CacheableLookup`.
 
 #### cache
 
-Type: [`TTLMap`](index.d.ts) | [`Keyv`](https://github.com/lukechilds/keyv/)<br>
-Default: `new TTLMap()`
+Type: `Map` | [`Keyv`](https://github.com/lukechilds/keyv/)<br>
+Default: `new Map()`
 
 Custom cache instance. If `undefined`, it will create a new one.
 
@@ -64,9 +64,33 @@ Options used to cache the DNS lookups.
 Type: `number`<br>
 Default: `Infinity`
 
-Limits the cache time (TTL in seconds).
+The maximum lifetime of the entries received from the specifed DNS server (TTL in seconds).
 
 If set to `0`, it will make a new DNS query each time.
+
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. For example, if you use Cloudflare, this value should be greater than `0.01`.
+
+##### options.fallbackTtl
+
+Type: `number`<br>
+Default: `1`
+
+The lifetime of the entries received from the OS (TTL in seconds).
+
+**Note**: This option is independent, `options.maxTtl` does not affect this.
+
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. For example, if you use Cloudflare, this value should be greater than `0.01`.
+
+##### options.errorTtl
+
+Type: `number`<br>
+Default: `0.15`
+
+The time how long it needs to remember failed queries (TTL in seconds).
+
+**Note**: This option is independent, `options.maxTtl` does not affect this.
+
+**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. For example, if you use Cloudflare, this value should be greater than `0.01`.
 
 ##### options.resolver
 
@@ -123,7 +147,7 @@ When `options.all` is `true`, then `callback(error, entries)` is called.
 
 Type: `Array`
 
-DNS servers used to make the query. Can be overridden - then the new servers will be used.
+The DNS servers used to make queries. Can be overridden - doing so will trigger `cacheableLookup.updateInterfaceInfo()`.
 
 #### [lookup(hostname, options, callback)](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback)
 
@@ -146,16 +170,6 @@ Type: `object`
 
 The same as the [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) options.
 
-##### options.throwNotFound
-
-Type: `boolean`<br>
-Default: `true`
-
-If set to `false` and it gets no match, it will return `undefined`.
-If set to `true` and it gets no match, it will throw `ENOTFOUND` error.
-
-**Note**: This option is meant **only** for the asynchronous implementation! The callback version will always pass an error if no match found.
-
 #### query(hostname)
 
 An asynchronous function which returns cached DNS lookup entries.<br>
@@ -174,7 +188,7 @@ Returns an array of objects with `address`, `family`, `ttl` and `expires` proper
 
 #### tick()
 
-Removes outdated entries.
+Removes outdated entries. It's automatically called on every lookup.
 
 #### updateInterfaceInfo()
 
@@ -182,9 +196,9 @@ Updates interface info. For example, you need to run this when you plug or unplu
 
 **Note:** Running `updateInterfaceInfo()` will also trigger `clear()`!
 
-#### clear()
+#### clear(hostname?)
 
-Clears the cache.
+Clears the cache for the given hostname. If the hostname argument is not present, the entire cache will be cleared.
 
 ## High performance
 
@@ -194,18 +208,15 @@ Performed on:
 - CPU governor: performance
 
 ```
-CacheableLookup#lookupAsync                x 2,024,888 ops/sec ±0.84%  (87 runs sampled)
-CacheableLookup#lookupAsync.all            x 2,093,860 ops/sec ±1.00%  (88 runs sampled)
-CacheableLookup#lookupAsync.all.ADDRCONFIG x 1,898,088 ops/sec ±0.61%  (89 runs sampled)
-CacheableLookup#lookup                     x 1,905,060 ops/sec ±0.76%  (90 runs sampled)
-CacheableLookup#lookup.all                 x 1,889,284 ops/sec ±1.37%  (87 runs sampled)
-CacheableLookup#lookup.all.ADDRCONFIG      x 1,740,616 ops/sec ±0.83%  (89 runs sampled)
-CacheableLookup#lookupAsync - zero TTL     x 226       ops/sec ±3.55%  (56 runs sampled)
-CacheableLookup#lookup      - zero TTL     x 228       ops/sec ±2.48%  (62 runs sampled)
-dns#resolve4                               x 346       ops/sec ±3.58%  (55 runs sampled)
-dns#lookup                                 x 20,368    ops/sec ±38.31% (53 runs sampled)
-dns#lookup.all                             x 13,529    ops/sec ±31.35% (29 runs sampled)
-dns#lookup.all.ADDRCONFIG                  x 6,211     ops/sec ±22.92% (26 runs sampled)
+CacheableLookup#lookupAsync                x 2,319,803 ops/sec ±0.82% (84 runs sampled)
+CacheableLookup#lookupAsync.all            x 2,419,856 ops/sec ±0.66% (89 runs sampled)
+CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,127,545 ops/sec ±1.04% (89 runs sampled)
+CacheableLookup#lookup                     x 2,217,960 ops/sec ±1.15% (88 runs sampled)
+CacheableLookup#lookup.all                 x 2,218,162 ops/sec ±0.71% (89 runs sampled)
+CacheableLookup#lookup.all.ADDRCONFIG      x 1,998,112 ops/sec ±0.75% (88 runs sampled)
+dns#lookup                                 x 7,272     ops/sec ±0.36% (86 runs sampled)
+dns#lookup.all                             x 7,249     ops/sec ±0.40% (86 runs sampled)
+dns#lookup.all.ADDRCONFIG                  x 5,693     ops/sec ±0.28% (85 runs sampled)
 Fastest is CacheableLookup#lookupAsync.all
 ```
 

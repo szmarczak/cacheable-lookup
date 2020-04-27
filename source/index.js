@@ -1,10 +1,15 @@
 'use strict';
-const {V4MAPPED, ADDRCONFIG, promises: dnsPromises} = require('dns');
+const {
+	V4MAPPED,
+	ADDRCONFIG,
+	promises: {
+		Resolver: AsyncResolver
+	},
+	lookup
+} = require('dns');
 const {promisify} = require('util');
 const os = require('os');
 const HostsResolver = require('./hosts-resolver');
-
-const {Resolver: AsyncResolver} = dnsPromises;
 
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
@@ -47,60 +52,28 @@ const getIfaceInfo = () => {
 	return {has4, has6};
 };
 
-class TTLMap {
-	constructor() {
-		this.values = new Map();
-		this.expiries = new Map();
-	}
-
-	set(key, value, ttl) {
-		this.values.set(key, value);
-		this.expiries.set(key, ttl && (ttl + Date.now()));
-	}
-
-	get(key) {
-		const expiry = this.expiries.get(key);
-
-		if (typeof expiry === 'number') {
-			if (Date.now() > expiry) {
-				this.values.delete(key);
-				this.expiries.delete(key);
-
-				return;
-			}
-		}
-
-		return this.values.get(key);
-	}
-
-	delete(key) {
-		this.values.delete(key);
-		return this.expiries.delete(key);
-	}
-
-	clear() {
-		this.values.clear();
-		this.expiries.clear();
-	}
-
-	get size() {
-		return this.values.size;
-	}
-}
-
 const ttl = {ttl: true};
 
 class CacheableLookup {
 	constructor({
-		cache = new TTLMap(),
+		customHostsPath,
+		cache = new Map(),
 		maxTtl = Infinity,
 		resolver = new AsyncResolver(),
-		customHostsPath
+		fallbackTtl = 1,
+		errorTtl = 0.15
 	} = {}) {
 		this.maxTtl = maxTtl;
+		this.fallbackTtl = fallbackTtl;
+		this.errorTtl = errorTtl;
+
+		// This value is in milliseconds
+		this._lockTime = Math.max(Math.floor(Math.min(this.fallbackTtl * 1000, this.errorTtl * 1000)), 10);
 
 		this._cache = cache;
 		this._resolver = resolver;
+
+		this._lookup = promisify(lookup);
 
 		if (this._resolver instanceof AsyncResolver) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
@@ -119,6 +92,8 @@ class CacheableLookup {
 	}
 
 	set servers(servers) {
+		this.updateInterfaceInfo();
+
 		this._resolver.setServers(servers);
 	}
 
@@ -130,19 +105,33 @@ class CacheableLookup {
 		if (typeof options === 'function') {
 			callback = options;
 			options = {};
+		} else if (typeof options === 'number') {
+			options = {
+				family: options
+			};
+		}
+
+		if (!callback) {
+			throw new Error('Callback must be a function.');
 		}
 
 		// eslint-disable-next-line promise/prefer-await-to-then
-		this.lookupAsync(hostname, options, true).then(result => {
+		this.lookupAsync(hostname, options).then(result => {
 			if (options.all) {
 				callback(null, result);
 			} else {
 				callback(null, result.address, result.family, result.expires, result.ttl);
 			}
-		}).catch(callback);
+		}, callback);
 	}
 
-	async lookupAsync(hostname, options = {}, throwNotFound = undefined) {
+	async lookupAsync(hostname, options = {}) {
+		if (typeof options === 'number') {
+			options = {
+				family: options
+			};
+		}
+
 		let cached = await this.query(hostname);
 
 		if (options.family === 6) {
@@ -163,13 +152,11 @@ class CacheableLookup {
 		}
 
 		if (cached.length === 0) {
-			if (throwNotFound || options.throwNotFound !== false) {
-				const error = new Error(`ENOTFOUND ${hostname}`);
-				error.code = 'ENOTFOUND';
-				error.hostname = hostname;
+			const error = new Error(`ENOTFOUND ${hostname}`);
+			error.code = 'ENOTFOUND';
+			error.hostname = hostname;
 
-				throw error;
-			}
+			throw error;
 		}
 
 		if (options.all) {
@@ -180,13 +167,15 @@ class CacheableLookup {
 			return cached[0];
 		}
 
-		return this._getEntry(cached);
+		return this._getEntry(cached, hostname);
 	}
 
 	async query(hostname) {
+		this.tick();
+
 		let cached = await this._hostsResolver.get(hostname) || await this._cache.get(hostname);
 
-		if (!cached || cached.length === 0) {
+		if (!cached) {
 			cached = await this.queryAndCache(hostname);
 		}
 
@@ -198,16 +187,17 @@ class CacheableLookup {
 	}
 
 	async queryAndCache(hostname) {
+		// We could make an ANY query, but DNS servers may reject that.
 		const [As, AAAAs] = await Promise.all([this._resolve4(hostname, ttl).catch(() => []), this._resolve6(hostname, ttl).catch(() => [])]);
 
 		let cacheTtl = 0;
-		const now = Date.now();
 
 		if (As) {
 			for (const entry of As) {
 				entry.family = 4;
-				entry.expires = now + (entry.ttl * 1000);
+				entry.expires = Date.now() + (entry.ttl * 1000);
 
+				// Is the TTL the same for all entries?
 				cacheTtl = Math.max(cacheTtl, entry.ttl);
 			}
 		}
@@ -215,24 +205,49 @@ class CacheableLookup {
 		if (AAAAs) {
 			for (const entry of AAAAs) {
 				entry.family = 6;
-				entry.expires = now + (entry.ttl * 1000);
+				entry.expires = Date.now() + (entry.ttl * 1000);
 
+				// Is the TTL the same for all entries?
 				cacheTtl = Math.max(cacheTtl, entry.ttl);
 			}
 		}
 
-		const entries = [...(As || []), ...(AAAAs || [])];
+		let entries = [...(As || []), ...(AAAAs || [])];
 
-		cacheTtl = Math.min(this.maxTtl, cacheTtl) * 1000;
+		if (entries.length === 0) {
+			try {
+				entries = await this._lookup(hostname, {
+					all: true
+				});
+
+				for (const entry of entries) {
+					entry.ttl = this.fallbackTtl;
+					entry.expires = Date.now() + (entry.ttl * 1000);
+				}
+
+				cacheTtl = this.fallbackTtl * 1000;
+			} catch (error) {
+				cacheTtl = this.errorTtl * 1000;
+
+				entries.expires = Date.now() + cacheTtl;
+				await this._cache.set(hostname, entries, cacheTtl);
+
+				throw error;
+			}
+		} else {
+			cacheTtl = Math.min(this.maxTtl, cacheTtl) * 1000;
+		}
 
 		if (this.maxTtl > 0 && cacheTtl > 0) {
+			entries.expires = Date.now() + cacheTtl;
 			await this._cache.set(hostname, entries, cacheTtl);
 		}
 
 		return entries;
 	}
 
-	_getEntry(entries) {
+	// eslint-disable-next-line no-unused-vars
+	_getEntry(entries, hostname) {
 		return entries[Math.floor(Math.random() * entries.length)];
 	}
 
@@ -241,23 +256,21 @@ class CacheableLookup {
 			return;
 		}
 
-		if (this._cache instanceof TTLMap) {
+		if (this._cache instanceof Map) {
 			const now = Date.now();
 
-			for (const [hostname, expiry] of this._cache.expiries) {
-				if (now > expiry) {
+			for (const [hostname, {expires}] of this._cache) {
+				if (now >= expires) {
 					this._cache.delete(hostname);
 				}
 			}
 		}
 
-		this._hostsResolver.update();
-
 		this._tickLocked = true;
 
 		setTimeout(() => {
 			this._tickLocked = false;
-		}, 1000).unref();
+		}, this._lockTime).unref();
 	}
 
 	install(agent) {
@@ -273,9 +286,6 @@ class CacheableLookup {
 		agent.createConnection = (options, callback) => {
 			if (!('lookup' in options)) {
 				options.lookup = this.lookup;
-
-				// Make sure the database is up to date
-				this.tick();
 			}
 
 			return agent[kCacheableLookupCreateConnection](options, callback);
@@ -299,11 +309,15 @@ class CacheableLookup {
 
 	updateInterfaceInfo() {
 		this._iface = getIfaceInfo();
-		this._hostsResolver.update();
 		this._cache.clear();
 	}
 
-	clear() {
+	clear(hostname) {
+		if (hostname) {
+			this._cache.delete(hostname);
+			return;
+		}
+
 		this._cache.clear();
 	}
 }

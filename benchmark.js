@@ -4,15 +4,10 @@ const Benchmark = require('benchmark');
 const CacheableLookup = require('.');
 
 const cacheable = new CacheableLookup();
-const notCacheable = new CacheableLookup({maxTtl: 0, customHostsPath: false});
 const suite = new Benchmark.Suite();
 
 const options = {
 	defer: true
-};
-
-const resolve4Options = {
-	ttl: true
 };
 
 const lookupOptions = {
@@ -41,13 +36,6 @@ suite.add('CacheableLookup#lookupAsync', deferred => {
 	cacheable.lookup(query, lookupOptions, () => deferred.resolve());
 }, options).add('CacheableLookup#lookup.all.ADDRCONFIG', deferred => {
 	cacheable.lookup(query, lookupOptionsADDRCONFIG, () => deferred.resolve());
-}, options).add('CacheableLookup#lookupAsync - zero TTL', deferred => {
-	// eslint-disable-next-line promise/prefer-await-to-then
-	notCacheable.lookupAsync(query, lookupOptions).then(() => deferred.resolve());
-}, options).add('CacheableLookup#lookup - zero TTL', deferred => {
-	notCacheable.lookup(query, lookupOptions, () => deferred.resolve());
-}, options).add('dns#resolve4', deferred => {
-	dns.resolve4(query, resolve4Options, () => deferred.resolve());
 }, options).add('dns#lookup', deferred => {
 	dns.lookup(query, () => deferred.resolve());
 }, options).add('dns#lookup.all', deferred => {

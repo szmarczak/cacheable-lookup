@@ -32,7 +32,7 @@
   "homepage": "https://github.com/szmarczak/cacheable-lookup#readme",
   "devDependencies": {
     "@types/keyv": "^3.1.1",
-    "ava": "^3.1.0",
+    "ava": "^3.7.1",
     "benchmark": "^2.1.4",
     "coveralls": "^3.0.9",
     "keyv": "^4.0.0",

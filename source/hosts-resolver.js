@@ -1,5 +1,6 @@
 'use strict';
-const {stat, readFile} = require('fs').promises;
+const {watchFile} = require('fs');
+const {readFile} = require('fs').promises;
 const {isIP} = require('net');
 
 const isWindows = process.platform === 'win32';
@@ -19,31 +20,39 @@ const startsWithWhitespaceRegExp = /^[^\S\r\n]+/gm;
 class HostsResolver {
 	constructor(customHostsPath = hostsPath) {
 		this._hostsPath = customHostsPath;
-		this._promise = undefined;
 		this._error = null;
 		this._hosts = {};
-		this._lastModifiedTime = 0;
 
-		this.update();
+		this._promise = (async () => {
+			if (typeof this._hostsPath !== 'string') {
+				return;
+			}
+
+			await this._update();
+
+			if (this._error) {
+				return;
+			}
+
+			watchFile(this._hostsPath, (currentTime, previousTime) => {
+				if (currentTime > previousTime) {
+					this._update();
+				}
+			});
+
+			this._promise = null;
+		})();
 	}
 
 	async _update() {
 		try {
-			const {_hostsPath} = this;
-			const {mtimeMs} = await stat(_hostsPath);
-
-			if (mtimeMs === this._lastModifiedTime) {
-				return this._hosts;
-			}
-
-			this._lastModifiedTime = mtimeMs;
-			this._hosts = {};
-
-			let lines = await readFile(_hostsPath, fileOptions);
+			let lines = await readFile(this._hostsPath, fileOptions);
 			lines = lines.replace(whitespaceRegExp, ' ');
 			lines = lines.replace(tabRegExp, ' ');
 			lines = lines.replace(startsWithWhitespaceRegExp, '');
 			lines = lines.split('\n');
+
+			this._hosts = {};
 
 			for (const line of lines) {
 				const parts = line.split(' ');
@@ -75,6 +84,7 @@ class HostsResolver {
 						}
 					} else {
 						this._hosts[hostname] = [];
+						this._hosts[hostname].expires = Infinity;
 					}
 
 					this._hosts[hostname].push({
@@ -89,20 +99,6 @@ class HostsResolver {
 			this._hosts = {};
 			this._error = error;
 		}
-	}
-
-	async update() {
-		if (this._error || this._hostsPath === false) {
-			return this._hosts;
-		}
-
-		const promise = this._update();
-
-		this._promise = promise;
-		await promise;
-		this._promise = undefined;
-
-		return this._hosts;
 	}
 
 	async get(hostname) {
