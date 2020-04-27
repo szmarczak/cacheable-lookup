@@ -958,3 +958,27 @@ test('errors are cached', async t => {
 
 	t.is(cacheable._cache.size, 0);
 });
+
+test('passing family as options', async t => {
+	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+
+	const promisified = promisify(cacheable.lookup);
+
+	const entry = await cacheable.lookupAsync('localhost', 6);
+	t.is(entry.address, '::ffff:127.0.0.2');
+	t.is(entry.family, 6);
+
+	const address = await promisified('localhost', 6);
+	t.is(address, '::ffff:127.0.0.2');
+});
+
+test('clear(hostname) works', async t => {
+	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+
+	await cacheable.lookupAsync('localhost');
+	await cacheable.lookupAsync('temporary');
+
+	cacheable.clear('localhost');
+
+	t.is(cacheable._cache.size, 1);
+});

@@ -105,6 +105,10 @@ class CacheableLookup {
 		if (typeof options === 'function') {
 			callback = options;
 			options = {};
+		} else if (typeof options === 'number') {
+			options = {
+				family: options
+			};
 		}
 
 		if (!callback) {
@@ -122,6 +126,12 @@ class CacheableLookup {
 	}
 
 	async lookupAsync(hostname, options = {}) {
+		if (typeof options === 'number') {
+			options = {
+				family: options
+			};
+		}
+
 		let cached = await this.query(hostname);
 
 		if (options.family === 6) {
@@ -187,7 +197,7 @@ class CacheableLookup {
 				entry.family = 4;
 				entry.expires = Date.now() + (entry.ttl * 1000);
 
-				// Is TTL the same for all entries?
+				// Is the TTL the same for all entries?
 				cacheTtl = Math.max(cacheTtl, entry.ttl);
 			}
 		}
@@ -197,7 +207,7 @@ class CacheableLookup {
 				entry.family = 6;
 				entry.expires = Date.now() + (entry.ttl * 1000);
 
-				// Is TTL the same for all entries?
+				// Is the TTL the same for all entries?
 				cacheTtl = Math.max(cacheTtl, entry.ttl);
 			}
 		}
@@ -302,7 +312,12 @@ class CacheableLookup {
 		this._cache.clear();
 	}
 
-	clear() {
+	clear(hostname) {
+		if (hostname) {
+			this._cache.delete(hostname);
+			return;
+		}
+
 		this._cache.clear();
 	}
 }

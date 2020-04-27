@@ -196,9 +196,9 @@ Updates interface info. For example, you need to run this when you plug or unplu
 
 **Note:** Running `updateInterfaceInfo()` will also trigger `clear()`!
 
-#### clear()
+#### clear(hostname?)
 
-Clears the cache.
+Clears the cache for the given hostname. If the hostname argument is not present, the entire cache will be cleared.
 
 ## High performance
 

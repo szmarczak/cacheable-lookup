@@ -1,9 +1,11 @@
-import {Resolver, LookupAddress, promises as dnsPromises} from 'dns';
+import {Resolver, promises as dnsPromises} from 'dns';
 import {Agent} from 'http';
 
-type AsyncResolver = dnsPromises.Resolver;
+export {Resolver};
 
-type IPFamily = 4 | 6;
+export type AsyncResolver = dnsPromises.Resolver;
+
+export type IPFamily = 4 | 6;
 
 type TPromise<T> = T | Promise<T>;
 
@@ -35,9 +37,23 @@ export interface Options {
 	 * @default '/etc/hosts'
 	 */
 	customHostsPath?: string | false;
+	/**
+	 * The lifetime of the entries received from the OS (TTL in seconds).
+	 *
+	 * **Note**: This option is independent, `options.maxTtl` does not affect this.
+	 * @default 1
+	 */
+	fallbackTtl?: number;
+	/**
+	 * The time how long it needs to remember failed queries (TTL in seconds).
+	 *
+	 * **Note**: This option is independent, `options.maxTtl` does not affect this.
+	 * @default 0.15
+	 */
+	errorTtl?: number;
 }
 
-interface EntryObject {
+export interface EntryObject {
 	/**
 	 * The IP address (can be an IPv4 or IPv5 address).
 	 */
@@ -56,7 +72,7 @@ interface EntryObject {
 	readonly expires: number;
 }
 
-interface LookupOptions {
+export interface LookupOptions {
 	/**
 	 * One or more supported getaddrinfo flags. Multiple flags may be passed by bitwise ORing their values.
 	 */
@@ -70,14 +86,6 @@ interface LookupOptions {
 	 * @default false
 	 */
 	all?: boolean;
-}
-
-interface AsyncLookupOptions extends LookupOptions {
-	/**
-	 * Throw when there's no match. If set to `false` and it gets no match, it will return `undefined`.
-	 * @default false
-	 */
-	throwNotFound?: boolean;
 }
 
 export default class CacheableLookup {
@@ -96,8 +104,8 @@ export default class CacheableLookup {
 	/**
 	 * The asynchronous version of `dns.lookup(…)`.
 	 */
-	lookupAsync(hostname: string, options: AsyncLookupOptions & {all: true}): Promise<ReadonlyArray<EntryObject>>;
-	lookupAsync(hostname: string, options: AsyncLookupOptions): Promise<EntryObject>;
+	lookupAsync(hostname: string, options: LookupOptions & {all: true}): Promise<ReadonlyArray<EntryObject>>;
+	lookupAsync(hostname: string, options: LookupOptions): Promise<EntryObject>;
 	lookupAsync(hostname: string): Promise<EntryObject>;
 	lookupAsync(hostname: string, family: IPFamily): Promise<EntryObject>;
 	/**
@@ -108,6 +116,11 @@ export default class CacheableLookup {
 	 * An asynchronous function which makes a new DNS lookup query and updates the database. This is used by `query(hostname, family)` if no entry in the database is present. Returns an array of objects with `address`, `family`, `ttl` and `expires` properties.
 	 */
 	queryAndCache(hostname: string): Promise<ReadonlyArray<EntryObject>>;
+	/**
+	 * Returns an entry from the array for the given hostname.
+	 * Useful to implement a round-robin algorithm.
+	 */
+	_getEntry(entries: ReadonlyArray<EntryObject>, hostname: string): EntryObject;
 	/**
 	 * Removes outdated entries.
 	 */
@@ -125,7 +138,7 @@ export default class CacheableLookup {
 	 */
 	updateInterfaceInfo(): void;
 	/**
-	 * Clears the cache.
+	 * Clears the cache for the given hostname. If the hostname argument is not present, the entire cache will be cleared.
 	 */
-	clear(): void;
+	clear(hostname?: string): void;
 }
