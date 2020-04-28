@@ -1,5 +1,6 @@
 'use strict';
-const {readFile, stat} = require('fs').promises;
+const {watchFile} = require('fs');
+const {readFile} = require('fs').promises;
 const {isIP} = require('net');
 
 const isWindows = process.platform === 'win32';
@@ -15,27 +16,6 @@ const fileOptions = {
 const whitespaceRegExp = /[^\S\r\n]{2,}/g;
 const tabRegExp = /\t+/g;
 const startsWithWhitespaceRegExp = /^[^\S\r\n]+/gm;
-
-// TODO: Remove this when https://github.com/nodejs/node/issues/33096 gets fixed
-const watchFile = (path, callback, onError) => {
-	let previousTime = null;
-
-	const interval = setInterval(async () => {
-		try {
-			const {mtimeMs} = await stat(path);
-
-			if (previousTime !== null && mtimeMs !== previousTime) {
-				callback(mtimeMs, previousTime);
-			}
-
-			previousTime = mtimeMs;
-		} catch (error) {
-			clearInterval(interval);
-
-			onError(error);
-		}
-	}, 1000 * 60).unref();
-};
 
 class HostsResolver {
 	constructor(customHostsPath = hostsPath) {
@@ -54,11 +34,13 @@ class HostsResolver {
 				return;
 			}
 
-			watchFile(this._hostsPath, (currentTime, previousTime) => {
-				if (currentTime > previousTime) {
+			watchFile(this._hostsPath, {
+				persistent: false
+			}, (current, previous) => {
+				if (current.mtime > previous.mtime) {
 					this._update();
 				}
-			}, error => {
+			}).once('error', error => {
 				this._error = error;
 				this._hosts = {};
 			});
