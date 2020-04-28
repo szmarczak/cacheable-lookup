@@ -106,12 +106,12 @@ Default: `undefined` (OS-specific)
 
 The full path to the `hosts` file. Set this to `false` to prevent loading entries from the `hosts` file.
 
-##### options.randomEntry
+##### options.firstEntry
 
 Type: `boolean`<br>
-Default: `true`
+Default: `false`
 
-If the host resolves to multiple ip's, return each time a random ip address. Set this to `false` to always return the same ip.
+If the host resolves to multiple ip's, return only the first one.
 
 ### Entry object
 

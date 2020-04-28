@@ -57,7 +57,7 @@ const ttl = {ttl: true};
 class CacheableLookup {
 	constructor({
 		customHostsPath,
-		randomEntry = true,
+		firstEntry = false,
 		cache = new Map(),
 		maxTtl = Infinity,
 		resolver = new AsyncResolver(),
@@ -67,7 +67,7 @@ class CacheableLookup {
 		this.maxTtl = maxTtl;
 		this.fallbackTtl = fallbackTtl;
 		this.errorTtl = errorTtl;
-		this.randomEntry = randomEntry;
+		this.firstEntry = firstEntry;
 
 		// This value is in milliseconds
 		this._lockTime = Math.max(Math.floor(Math.min(this.fallbackTtl * 1000, this.errorTtl * 1000)), 10);
@@ -167,7 +167,7 @@ class CacheableLookup {
 			return cached;
 		}
 
-		if (cached.length === 1 || !this.randomEntry) {
+		if (cached.length === 1 || this.firstEntry) {
 			return cached[0];
 		}
 

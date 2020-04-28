@@ -256,8 +256,8 @@ test.serial('multiple entries', async t => {
 	Math.random = random;
 });
 
-test.serial('multiple entries when `options.randomEntry` is falsy, then we always resolve to the first entry', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false, randomEntry: false});
+test.serial('multiple entries when `options.firstEntry` is true, then we always resolve to the first entry', async t => {
+	const cacheable = new CacheableLookup({resolver, customHostsPath: false, firstEntry: true});
 
 	const {random} = Math;
 
