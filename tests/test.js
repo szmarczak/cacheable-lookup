@@ -256,6 +256,36 @@ test.serial('multiple entries', async t => {
 	Math.random = random;
 });
 
+test.serial('multiple entries when `options.randomEntry` is falsy, then we always resolve to the first entry', async t => {
+	const cacheable = new CacheableLookup({resolver, customHostsPath: false, randomEntry: false});
+
+	const {random} = Math;
+
+	{
+		// Let's fool the destiny
+		Math.random = () => 0;
+		const entry = await cacheable.lookupAsync('multiple');
+
+		verify(t, entry, {
+			address: '127.0.0.127',
+			family: 4
+		});
+	}
+
+	{
+		// Let's fool the destiny
+		Math.random = () => 0.6;
+		const entry = await cacheable.lookupAsync('multiple');
+
+		verify(t, entry, {
+			address: '127.0.0.127',
+			family: 4
+		});
+	}
+
+	Math.random = random;
+});
+
 test('if `options.all` is falsy, then `options.family` is 4 when not defined', async t => {
 	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
 

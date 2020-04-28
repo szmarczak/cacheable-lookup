@@ -36,6 +36,12 @@ export interface Options {
 	 */
 	customHostsPath?: string | false;
 	/**
+	 * If the host resolves to multiple ip's, return each time a random ip address.
+	 * Set this to `false` to always return the same ip.
+	 * @default true
+	 */
+	randomEntry: true;
+	/**
 	 * The lifetime of the entries received from the OS (TTL in seconds).
 	 *
 	 * **Note**: This option is independent, `options.maxTtl` does not affect this.

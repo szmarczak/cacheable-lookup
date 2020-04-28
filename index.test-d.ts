@@ -11,6 +11,7 @@ import CacheableLookup, {EntryObject} from '.';
 	new CacheableLookup({
 		cache: new Keyv(),
 		customHostsPath: false,
+		randomEntry: true,
 		fallbackTtl: 0,
 		errorTtl: 0,
 		maxTtl: 0,
