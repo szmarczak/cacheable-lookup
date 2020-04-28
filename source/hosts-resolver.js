@@ -60,6 +60,7 @@ class HostsResolver {
 				}
 			}, error => {
 				this._error = error;
+				this._hosts = {};
 			});
 
 			this._promise = null;
