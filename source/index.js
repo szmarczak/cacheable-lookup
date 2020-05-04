@@ -286,7 +286,7 @@ class CacheableLookup {
 
 		this._tickLocked = true;
 
-		const interval = setTimeout(() => {
+		const timeout = setTimeout(() => {
 			this._tickLocked = false;
 		}, this._lockTime);
 		
