@@ -288,11 +288,11 @@ class CacheableLookup {
 		const timeout = setTimeout(() => {
 			this._tickLocked = false;
 		}, this._lockTime);
-		
+
 		// There is no `timeout.unref()` when running inside an Electron renderer
 		if (timeout.unref) {
 			timeout.unref();
-		};
+		}
 	}
 
 	install(agent) {
