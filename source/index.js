@@ -290,7 +290,7 @@ class CacheableLookup {
 			this._tickLocked = false;
 		}, this._lockTime);
 		
-		// unref is undefined in some environments
+		// There is no `timeout.unref()` when running inside an Electron renderer
 		if (interval.unref) {
 			interval.unref();
 		};
