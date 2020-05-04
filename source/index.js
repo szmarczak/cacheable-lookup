@@ -286,9 +286,14 @@ class CacheableLookup {
 
 		this._tickLocked = true;
 
-		setTimeout(() => {
+		const interval = setTimeout(() => {
 			this._tickLocked = false;
-		}, this._lockTime).unref();
+		}, this._lockTime);
+		
+		// unref is undefined in some environments
+		if (interval.unref) {
+			interval.unref();
+		};
 	}
 
 	install(agent) {
