@@ -290,8 +290,8 @@ class CacheableLookup {
 		}, this._lockTime);
 		
 		// There is no `timeout.unref()` when running inside an Electron renderer
-		if (interval.unref) {
-			interval.unref();
+		if (timeout.unref) {
+			timeout.unref();
 		};
 	}
 
