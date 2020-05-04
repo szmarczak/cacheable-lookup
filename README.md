@@ -18,7 +18,7 @@ const http = require('http');
 const CacheableLookup = require('cacheable-lookup');
 const cacheable = new CacheableLookup();
 
-http.get('https://example.com', {lookup: cacheable.lookup}, response => {
+http.get('http://example.com', {lookup: cacheable.lookup}, response => {
 	// Handle the response here
 });
 ```
@@ -32,7 +32,7 @@ const cacheable = new CacheableLookup();
 
 cacheable.install(http.globalAgent);
 
-http.get('https://example.com', response => {
+http.get('http://example.com', response => {
 	// Handle the response here
 });
 ```
