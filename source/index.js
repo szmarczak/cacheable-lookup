@@ -9,7 +9,6 @@ const {
 } = require('dns');
 const {promisify} = require('util');
 const os = require('os');
-const {setTimeout} = require('timers');
 const HostsResolver = require('./hosts-resolver');
 
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
