@@ -6,6 +6,7 @@ const path = require('path');
 const test = require('ava');
 const Keyv = require('keyv');
 const proxyquire = require('proxyquire');
+const fs = require('fs').promises;
 
 const makeRequest = options => new Promise((resolve, reject) => {
 	http.get(options, resolve).once('error', reject);
@@ -782,6 +783,23 @@ test.serial('double tick() has no effect', t => {
 });
 
 test('respects the `hosts` file', async t => {
+	const hostFile = path.join(__dirname, 'hosts.txt');
+	// Ensure that at least one line ends with a windows CRLF
+	const textContent = await fs.readFile(hostFile, {encoding: 'utf-8'});
+	const lines = textContent.split('\n').map(l => l.trim());
+	const altered = lines.map(line => {
+		if (line.includes('has-windows-newline')) {
+			return `${line}\r`;
+		}
+
+		return line;
+	});
+	if (!altered.find(line => line.includes('has-windows-newline'))) {
+		throw new Error('Can\'t find "has-windows-newline" hosts entry');
+	}
+
+	await fs.writeFile(hostFile, Buffer.from(altered.join('\n')));
+
 	const cacheable = new CacheableLookup({
 		customHostsPath: path.resolve(__dirname, 'hosts.txt')
 	});
@@ -805,6 +823,7 @@ test('respects the `hosts` file', async t => {
 	t.is(await getAddress('manywhitespaces'), '127.0.0.1');
 	t.is(await getAddress('startswithwhitespace'), '127.0.0.1');
 	t.is(await getAddress('tab'), '127.0.0.1');
+	t.is(await getAddress('has-windows-newline'), '127.0.0.1');
 
 	{
 		const entry = await cacheable.lookupAsync('foo3', {family: 4});
