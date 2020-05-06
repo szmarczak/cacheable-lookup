@@ -55,6 +55,7 @@ class HostsResolver {
 			lines = lines.replace(whitespaceRegExp, ' ');
 			lines = lines.replace(tabRegExp, ' ');
 			lines = lines.replace(startsWithWhitespaceRegExp, '');
+			console.log(lines);
 			lines = lines.split('\n');
 
 			this._hosts = {};
