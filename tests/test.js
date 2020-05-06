@@ -805,6 +805,7 @@ test('respects the `hosts` file', async t => {
 	t.is(await getAddress('manywhitespaces'), '127.0.0.1');
 	t.is(await getAddress('startswithwhitespace'), '127.0.0.1');
 	t.is(await getAddress('tab'), '127.0.0.1');
+	t.is(await getAddress('doublenewline'), '127.0.0.1');
 
 	{
 		const entry = await cacheable.lookupAsync('foo3', {family: 4});
@@ -860,6 +861,7 @@ test('the `hosts` file support can be turned off', async t => {
 	await t.throwsAsync(getAddress('manywhitespaces'), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('startswithwhitespace'), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('tab'), {code: 'ENOTFOUND'});
+	await t.throwsAsync(getAddress('doublenewline'), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('foo3', {family: 4}), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('foo3', {family: 6}), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('foo4', {all: true}), {code: 'ENOTFOUND'});

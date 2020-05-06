@@ -1,21 +1,20 @@
 'use strict';
+const path = require('path');
 const {watchFile} = require('fs');
 const {readFile} = require('fs').promises;
 const {isIP} = require('net');
 
 const isWindows = process.platform === 'win32';
-const hostsPath = isWindows ? `${process.env.SystemDrive}\\Windows\\System32\\drivers\\etc\\hosts` : '/etc/hosts';
+const hostsPath = isWindows ? path.join(process.env.SystemDrive, 'Windows\\System32\\drivers\\etc\\hosts') : '/etc/hosts';
 
-const hostnameRegExp = /^(?:(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$/;
+const hostnameRegExp = /^(?:(?:[a-zA-Z\d]|[a-zA-Z\d][a-zA-Z\d-]*[a-zA-Z\d])\.)*(?:[A-Za-z\d]|[A-Za-z\d][A-Za-z\d-]*[A-Za-z\d])$/;
 const isHostname = hostname => hostnameRegExp.test(hostname);
 
 const fileOptions = {
 	encoding: 'utf8'
 };
 
-const whitespaceRegExp = /[^\S\r\n]{2,}/g;
-const tabRegExp = /\t+/g;
-const startsWithWhitespaceRegExp = /^[^\S\r\n]+/gm;
+const whitespaceRegExp = /\s+/g;
 
 class HostsResolver {
 	constructor(customHostsPath = hostsPath) {
@@ -52,14 +51,13 @@ class HostsResolver {
 	async _update() {
 		try {
 			let lines = await readFile(this._hostsPath, fileOptions);
-			lines = lines.replace(whitespaceRegExp, ' ');
-			lines = lines.replace(tabRegExp, ' ');
-			lines = lines.replace(startsWithWhitespaceRegExp, '');
 			lines = lines.split('\n');
 
 			this._hosts = {};
 
-			for (const line of lines) {
+			for (let line of lines) {
+				line = line.replace(whitespaceRegExp, ' ').trim();
+
 				const parts = line.split(' ');
 
 				const family = isIP(parts[0]);
