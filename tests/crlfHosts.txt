@@ -1,0 +1,17 @@
+# this is a comment
+127.0.0.1 helloworld
+127.0.0.1 foobar # this is a comment
+# this is yet another comment 127.0.0.1 woofwoof
+noiphere
+127.0.0.1 # no host here
+127.0.0.1 foo1 foo2
+127.0.0.1 foo3
+::1 foo3
+127.0.0.1 foo4
+127.0.0.2 foo4
+127.0.0.1     manywhitespaces
+   127.0.0.1 startswithwhitespace
+127.0.0.1	tab
+0.0.0.0 DoNotDeleteThisLineForResetPurposesOnly
+
+127.0.0.1 doublenewline
