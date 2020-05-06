@@ -784,9 +784,9 @@ test.serial('double tick() has no effect', t => {
 
 test('respects the `hosts` file', async t => {
 	const hostFile = path.join(__dirname, 'hosts.txt');
-	// Ensure that at least one line ends with a windows CRLF
-	const textContent = await fs.readFile(hostFile, {encoding: 'utf-8'});
-	const lines = textContent.split('\n').map(l => l.trim());
+	// Ensure that at least one line ends with a Windows CRLF
+	const textContent = await fs.readFile(hostFile, {encoding: 'utf8'});
+	const lines = textContent.split('\n').map(line => line.trim());
 	const altered = lines.map(line => {
 		if (line.includes('has-windows-newline')) {
 			return `${line}\r`;
