@@ -15,7 +15,7 @@ const fileOptions = {
 };
 
 const whitespaceRegExp = /\s{2,}/g;
-const startsWithWhitespaceRegExp = /^[^\S\r\n]+/gm;
+const startsWithWhitespaceRegExp = /^\s/gm;
 
 class HostsResolver {
 	constructor(customHostsPath = hostsPath) {
