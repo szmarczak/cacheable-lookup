@@ -14,8 +14,7 @@ const fileOptions = {
 	encoding: 'utf8'
 };
 
-const whitespaceRegExp = /\s{2,}/g;
-const startsWithWhitespaceRegExp = /^\s/gm;
+const whitespaceRegExp = /\s+/g;
 
 class HostsResolver {
 	constructor(customHostsPath = hostsPath) {
@@ -52,14 +51,13 @@ class HostsResolver {
 	async _update() {
 		try {
 			let lines = await readFile(this._hostsPath, fileOptions);
-			lines = lines.replace(whitespaceRegExp, ' ');
-			lines = lines.replace('\t', ' ');
-			lines = lines.replace(startsWithWhitespaceRegExp, '');
 			lines = lines.split('\n');
 
 			this._hosts = {};
 
-			for (const line of lines) {
+			for (let line of lines) {
+				line = line.replace(whitespaceRegExp, ' ').trim();
+
 				const parts = line.split(' ');
 
 				const family = isIP(parts[0]);
