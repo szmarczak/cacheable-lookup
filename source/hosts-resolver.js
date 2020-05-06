@@ -119,4 +119,25 @@ class HostsResolver {
 	}
 }
 
+const resolvers = {};
+
+const getResolver = (customHostsPath = hostsPath) => {
+	if (typeof customHostsPath !== 'string') {
+		customHostsPath = false;
+	}
+
+	let resolver = resolvers[customHostsPath];
+
+	if (resolver) {
+		return resolver;
+	}
+
+	resolver = new HostsResolver(customHostsPath);
+	resolvers[customHostsPath] = resolver;
+
+	return resolver;
+};
+
+HostsResolver.getResolver = getResolver;
+
 module.exports = HostsResolver;

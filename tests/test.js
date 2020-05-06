@@ -1000,3 +1000,13 @@ test('prevents overloading DNS', async t => {
 
 	t.is(resolver.totalQueries, 2);
 });
+
+test('one HostsResolver per hosts file', t => {
+	const customHostsPath = path.resolve(__dirname, 'hosts.txt');
+	const resolver = createResolver();
+
+	const first = new CacheableLookup({customHostsPath, resolver});
+	const second = new CacheableLookup({customHostsPath, resolver});
+
+	t.is(first._hostsResolver, second._hostsResolver);
+});
