@@ -14,7 +14,7 @@ const fileOptions = {
 	encoding: 'utf8'
 };
 
-const whitespaceRegExp = /[^\S\r\n]{2,}/g;
+const whitespaceRegExp = /\s{2,}/g;
 const startsWithWhitespaceRegExp = /^[^\S\r\n]+/gm;
 
 class HostsResolver {
