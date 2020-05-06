@@ -861,6 +861,7 @@ test('the `hosts` file support can be turned off', async t => {
 	await t.throwsAsync(getAddress('manywhitespaces'), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('startswithwhitespace'), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('tab'), {code: 'ENOTFOUND'});
+	await t.throwsAsync(getAddress('doublenewline'), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('foo3', {family: 4}), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('foo3', {family: 6}), {code: 'ENOTFOUND'});
 	await t.throwsAsync(getAddress('foo4', {all: true}), {code: 'ENOTFOUND'});
