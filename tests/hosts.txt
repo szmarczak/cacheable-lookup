@@ -12,3 +12,6 @@ noiphere
 127.0.0.1     manywhitespaces
    127.0.0.1 startswithwhitespace
 127.0.0.1	tab
+0.0.0.0 DoNotDeleteThisLineForResetPurposesOnly
+
+127.0.0.1 doublenewline

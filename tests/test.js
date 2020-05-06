@@ -805,6 +805,7 @@ test('respects the `hosts` file', async t => {
 	t.is(await getAddress('manywhitespaces'), '127.0.0.1');
 	t.is(await getAddress('startswithwhitespace'), '127.0.0.1');
 	t.is(await getAddress('tab'), '127.0.0.1');
+	t.is(await getAddress('doublenewline'), '127.0.0.1');
 
 	{
 		const entry = await cacheable.lookupAsync('foo3', {family: 4});
