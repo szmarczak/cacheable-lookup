@@ -1,5 +1,5 @@
 'use strict';
-const {watchFile} = require('fs');
+const {watch} = require('fs');
 const {readFile} = require('fs').promises;
 const {isIP} = require('net');
 
@@ -18,11 +18,21 @@ const tabRegExp = /\t+/g;
 const startsWithWhitespaceRegExp = /^[^\S\r\n]+/gm;
 
 class HostsResolver {
-	constructor(customHostsPath = hostsPath) {
+	constructor({
+		watching = false,
+		customHostsPath = hostsPath
+	}) {
 		this._hostsPath = customHostsPath;
 		this._error = null;
+		this._watcher = null;
 		this._hosts = {};
 
+		if (watching) {
+				this._init();
+		}
+	}
+
+	_init() {
 		this._promise = (async () => {
 			if (typeof this._hostsPath !== 'string') {
 				return;
@@ -34,15 +44,23 @@ class HostsResolver {
 				return;
 			}
 
-			watchFile(this._hostsPath, {
+			this._watcher = watch(this._hostsPath, {
 				persistent: false
-			}, (current, previous) => {
-				if (current.mtime > previous.mtime) {
+			}, eventType => {
+				if (eventType === 'change') {
 					this._update();
+				} else {
+					this._watcher.close();
 				}
-			}).once('error', error => {
+			});
+
+			this._watcher.once('error', error => {
 				this._error = error;
 				this._hosts = {};
+			});
+
+			this._watcher.once('close', () => {
+				this._init();
 			});
 
 			this._promise = null;
