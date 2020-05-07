@@ -145,7 +145,7 @@ class CacheableLookup {
 			} else {
 				cached = filtered;
 			}
-		} else if (!options.all || options.family === 4) {
+		} else if (options.family === 4) {
 			cached = cached.filter(entry => entry.family === 4);
 		}
 
@@ -266,7 +266,7 @@ class CacheableLookup {
 
 	// eslint-disable-next-line no-unused-vars
 	_getEntry(entries, hostname) {
-		return entries[Math.floor(Math.random() * entries.length)];
+		return entries[0];
 	}
 
 	tick() {

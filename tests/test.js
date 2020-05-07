@@ -228,46 +228,6 @@ const verify = (t, entry, value) => {
 	t.deepEqual(entry, value);
 };
 
-test.serial('multiple entries', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
-
-	const {random} = Math;
-
-	{
-		// Let's fool the destiny
-		Math.random = () => 0;
-		const entry = await cacheable.lookupAsync('multiple');
-
-		verify(t, entry, {
-			address: '127.0.0.127',
-			family: 4
-		});
-	}
-
-	{
-		// Let's fool the destiny
-		Math.random = () => 0.6;
-		const entry = await cacheable.lookupAsync('multiple');
-
-		verify(t, entry, {
-			address: '127.0.0.128',
-			family: 4
-		});
-	}
-
-	Math.random = random;
-});
-
-test('if `options.all` is falsy, then `options.family` is 4 when not defined', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
-
-	const entry = await cacheable.lookupAsync('localhost');
-	verify(t, entry, {
-		address: '127.0.0.1',
-		family: 4
-	});
-});
-
 test('options.family', async t => {
 	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
 
@@ -1014,4 +974,14 @@ test('one HostsResolver per hosts file', t => {
 	const second = new CacheableLookup({customHostsPath, resolver});
 
 	t.is(first._hostsResolver, second._hostsResolver);
+});
+
+test('returns IPv6 if no other entries available', async t => {
+	const CacheableLookup = mockedInterfaces({has4: false, has6: true});
+	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+
+	verify(t, await cacheable.lookupAsync('localhost', {hints: ADDRCONFIG}), {
+		address: '::ffff:127.0.0.2',
+		family: 6
+	});
 });
