@@ -7,6 +7,8 @@ const test = require('ava');
 const Keyv = require('keyv');
 const proxyquire = require('proxyquire');
 
+const hostsFiles = ['hosts.txt', 'crlfHosts.txt'];
+
 const makeRequest = options => new Promise((resolve, reject) => {
 	http.get(options, resolve).once('error', reject);
 });
@@ -781,93 +783,95 @@ test.serial('double tick() has no effect', t => {
 	global.setTimeout = _setTimeout;
 });
 
-test('respects the `hosts` file', async t => {
-	const cacheable = new CacheableLookup({
-		customHostsPath: path.resolve(__dirname, 'hosts.txt')
+for (const file of hostsFiles) {
+	test(`respects the \`hosts\` file - ${file}`, async t => {
+		const cacheable = new CacheableLookup({
+			customHostsPath: path.resolve(__dirname, file)
+		});
+
+		const getAddress = async hostname => {
+			const result = await cacheable.lookupAsync(hostname);
+
+			t.is(result.family, 4);
+			t.is(result.ttl, Infinity);
+			t.is(result.expires, Infinity);
+			return result.address;
+		};
+
+		t.is(await getAddress('helloworld'), '127.0.0.1');
+		t.is(await getAddress('foobar'), '127.0.0.1');
+		await t.throwsAsync(getAddress('woofwoof'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('noiphere'), {code: 'ENOTFOUND'});
+		t.is(await getAddress('foo1'), '127.0.0.1');
+		t.is(await getAddress('foo2'), '127.0.0.1');
+		t.is(await getAddress('manywhitespaces'), '127.0.0.1');
+		t.is(await getAddress('startswithwhitespace'), '127.0.0.1');
+		t.is(await getAddress('tab'), '127.0.0.1');
+		t.is(await getAddress('doublenewline'), '127.0.0.1');
+
+		{
+			const entry = await cacheable.lookupAsync('foo3', {family: 4});
+			t.is(entry.address, '127.0.0.1');
+			t.is(entry.family, 4);
+			t.is(entry.expires, Infinity);
+			t.is(entry.ttl, Infinity);
+		}
+
+		{
+			const entry = await cacheable.lookupAsync('foo3', {family: 6});
+			t.is(entry.address, '::1');
+			t.is(entry.family, 6);
+			t.is(entry.expires, Infinity);
+			t.is(entry.ttl, Infinity);
+		}
+
+		{
+			const entries = await cacheable.lookupAsync('foo4', {all: true});
+			t.deepEqual(entries, [
+				{
+					address: '127.0.0.1',
+					family: 4,
+					expires: Infinity,
+					ttl: Infinity
+				}
+			]);
+		}
 	});
 
-	const getAddress = async hostname => {
-		const result = await cacheable.lookupAsync(hostname);
+	test(`the \`hosts\` file support can be turned off - ${file}`, async t => {
+		const cacheable = new CacheableLookup({
+			customHostsPath: false,
+			resolver
+		});
 
-		t.is(result.family, 4);
-		t.is(result.ttl, Infinity);
-		t.is(result.expires, Infinity);
+		const getAddress = async hostname => {
+			const result = await cacheable.lookupAsync(hostname);
 
-		return result.address;
-	};
+			t.is(result.family, 4);
+			t.is(result.ttl, Infinity);
+			t.is(result.expires, Infinity);
 
-	t.is(await getAddress('helloworld'), '127.0.0.1');
-	t.is(await getAddress('foobar'), '127.0.0.1');
-	await t.throwsAsync(getAddress('woofwoof'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('noiphere'), {code: 'ENOTFOUND'});
-	t.is(await getAddress('foo1'), '127.0.0.1');
-	t.is(await getAddress('foo2'), '127.0.0.1');
-	t.is(await getAddress('manywhitespaces'), '127.0.0.1');
-	t.is(await getAddress('startswithwhitespace'), '127.0.0.1');
-	t.is(await getAddress('tab'), '127.0.0.1');
-	t.is(await getAddress('doublenewline'), '127.0.0.1');
+			return result.address;
+		};
 
-	{
-		const entry = await cacheable.lookupAsync('foo3', {family: 4});
-		t.is(entry.address, '127.0.0.1');
-		t.is(entry.family, 4);
-		t.is(entry.expires, Infinity);
-		t.is(entry.ttl, Infinity);
-	}
+		await t.throwsAsync(getAddress('helloworld'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('foobar'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('woofwoof'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('noiphere'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('foo1'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('foo2'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('manywhitespaces'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('startswithwhitespace'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('tab'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('doublenewline'), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('foo3', {family: 4}), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('foo3', {family: 6}), {code: 'ENOTFOUND'});
+		await t.throwsAsync(getAddress('foo4', {all: true}), {code: 'ENOTFOUND'});
 
-	{
-		const entry = await cacheable.lookupAsync('foo3', {family: 6});
-		t.is(entry.address, '::1');
-		t.is(entry.family, 6);
-		t.is(entry.expires, Infinity);
-		t.is(entry.ttl, Infinity);
-	}
-
-	{
-		const entries = await cacheable.lookupAsync('foo4', {all: true});
-		t.deepEqual(entries, [
-			{
-				address: '127.0.0.1',
-				family: 4,
-				expires: Infinity,
-				ttl: Infinity
-			}
-		]);
-	}
-});
-
-test('the `hosts` file support can be turned off', async t => {
-	const cacheable = new CacheableLookup({
-		customHostsPath: false,
-		resolver
+		const {address} = await cacheable.lookupAsync('localhost');
+		t.is(address, '127.0.0.1');
 	});
-
-	const getAddress = async hostname => {
-		const result = await cacheable.lookupAsync(hostname);
-
-		t.is(result.family, 4);
-		t.is(result.ttl, Infinity);
-		t.is(result.expires, Infinity);
-
-		return result.address;
-	};
-
-	await t.throwsAsync(getAddress('helloworld'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('foobar'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('woofwoof'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('noiphere'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('foo1'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('foo2'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('manywhitespaces'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('startswithwhitespace'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('tab'), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('foo3', {family: 4}), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('foo3', {family: 6}), {code: 'ENOTFOUND'});
-	await t.throwsAsync(getAddress('foo4', {all: true}), {code: 'ENOTFOUND'});
-
-	const {address} = await cacheable.lookupAsync('localhost');
-	t.is(address, '127.0.0.1');
-});
+}
 
 test('custom cache support', async t => {
 	const cache = new Keyv();
