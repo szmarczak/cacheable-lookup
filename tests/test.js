@@ -795,7 +795,6 @@ for (const file of hostsFiles) {
 			t.is(result.family, 4);
 			t.is(result.ttl, Infinity);
 			t.is(result.expires, Infinity);
-
 			return result.address;
 		};
 
@@ -1005,4 +1004,14 @@ test('prevents overloading DNS', async t => {
 	await Promise.all([lookupAsync('localhost'), lookupAsync('localhost')]);
 
 	t.is(resolver.totalQueries, 2);
+});
+
+test('one HostsResolver per hosts file', t => {
+	const customHostsPath = path.resolve(__dirname, 'hosts.txt');
+	const resolver = createResolver();
+
+	const first = new CacheableLookup({customHostsPath, resolver});
+	const second = new CacheableLookup({customHostsPath, resolver});
+
+	t.is(first._hostsResolver, second._hostsResolver);
 });

@@ -9,7 +9,7 @@ const {
 } = require('dns');
 const {promisify} = require('util');
 const os = require('os');
-const HostsResolver = require('./hosts-resolver');
+const {getResolver: getHostsResolver} = require('./hosts-resolver');
 
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
@@ -44,7 +44,7 @@ const getIfaceInfo = () => {
 			}
 
 			if (has4 && has6) {
-				break;
+				return {has4, has6};
 			}
 		}
 	}
@@ -57,6 +57,7 @@ const ttl = {ttl: true};
 class CacheableLookup {
 	constructor({
 		customHostsPath,
+		watchingHostsFile = false,
 		cache = new Map(),
 		maxTtl = Infinity,
 		resolver = new AsyncResolver(),
@@ -84,7 +85,7 @@ class CacheableLookup {
 		}
 
 		this._iface = getIfaceInfo();
-		this._hostsResolver = new HostsResolver(customHostsPath);
+		this._hostsResolver = getHostsResolver({customHostsPath, watching: watchingHostsFile});
 		this._tickLocked = false;
 
 		this._pending = {};
@@ -289,7 +290,7 @@ class CacheableLookup {
 			this._tickLocked = false;
 		}, this._lockTime);
 
-		// There is no `timeout.unref()` when running inside an Electron renderer
+		/* istanbul ignore next: There is no `timeout.unref()` when running inside an Electron renderer */
 		if (timeout.unref) {
 			timeout.unref();
 		}
