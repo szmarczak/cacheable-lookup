@@ -35,6 +35,8 @@ class HostsResolver {
 		this._promise = (async () => {
 			await this._update();
 
+			this._promise = null;
+
 			if (this._error) {
 				return;
 			}
@@ -59,8 +61,6 @@ class HostsResolver {
 					this._init();
 				});
 			}
-
-			this._promise = null;
 		})();
 	}
 
