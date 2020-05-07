@@ -152,6 +152,9 @@ const createResolver = () => {
 				temporary: [
 					{address: '127.0.0.1', family: 4, ttl: 1}
 				],
+				twoSeconds: [
+					{address: '127.0.0.1', family: 4, ttl: 2}
+				],
 				ttl: [
 					{address: '127.0.0.1', family: 4, ttl: 1}
 				],
@@ -679,68 +682,15 @@ test('clear() works', async t => {
 	t.is(cacheable._cache.size, 0);
 });
 
-test('tick() works', async t => {
+test('ttl works', async t => {
 	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
 
-	await cacheable.lookupAsync('temporary');
-	t.is(cacheable._cache.size, 1);
+	await Promise.all([cacheable.lookupAsync('temporary'), cacheable.lookupAsync('ttl')]);
+	t.is(cacheable._cache.size, 2);
 
-	await sleep((resolver.data['127.0.0.1'].temporary[0].ttl * 1000) + 1);
+	await sleep(2001);
 
-	cacheable.tick();
 	t.is(cacheable._cache.size, 0);
-});
-
-test('tick() doesn\'t delete active entries', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
-	cacheable.tick();
-
-	await cacheable.lookupAsync('temporary');
-	t.is(cacheable._cache.size, 1);
-
-	await sleep((cacheable._lockTime) + 1);
-
-	cacheable.tick();
-	t.is(cacheable._cache.size, 1);
-});
-
-test('tick() works properly', async t => {
-	const cacheable = new CacheableLookup({customHostsPath: false});
-
-	cacheable.tick();
-	t.true(cacheable._tickLocked);
-
-	const sleepPromise = sleep((cacheable._lockTime) + 1);
-
-	// This sometimes fails on GitHub Actions on Windows
-	// I suspect it's I/O is poor
-	await sleep((cacheable._lockTime) - 15);
-	t.true(cacheable._tickLocked);
-
-	await sleepPromise;
-	t.false(cacheable._tickLocked);
-});
-
-test.serial('double tick() has no effect', t => {
-	const cacheable = new CacheableLookup({customHostsPath: false});
-
-	const _setTimeout = setTimeout;
-	global.setTimeout = (...args) => {
-		t.pass();
-
-		global.setTimeout = _setTimeout;
-		return _setTimeout(...args);
-	};
-
-	cacheable.tick();
-
-	global.setTimeout = () => {
-		t.fail('this should not be called');
-	};
-
-	cacheable.tick();
-
-	global.setTimeout = _setTimeout;
 });
 
 for (const file of hostsFiles) {

@@ -68,9 +68,6 @@ class CacheableLookup {
 		this.fallbackTtl = fallbackTtl;
 		this.errorTtl = errorTtl;
 
-		// This value is in milliseconds
-		this._lockTime = Math.max(Math.floor(Math.min(this.fallbackTtl * 1000, this.errorTtl * 1000)), 10);
-
 		this._cache = cache;
 		this._resolver = resolver;
 
@@ -86,9 +83,10 @@ class CacheableLookup {
 
 		this._iface = getIfaceInfo();
 		this._hostsResolver = getHostsResolver({customHostsPath, watching: watchingHostsFile});
-		this._tickLocked = false;
 
 		this._pending = {};
+
+		this._nextRemovalTime = false;
 
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
@@ -174,8 +172,6 @@ class CacheableLookup {
 	}
 
 	async query(hostname) {
-		this.tick();
-
 		let cached = await this._hostsResolver.get(hostname) || await this._cache.get(hostname);
 
 		if (!cached) {
@@ -246,6 +242,8 @@ class CacheableLookup {
 
 					entries.expires = Date.now() + cacheTtl;
 					await this._cache.set(hostname, entries, cacheTtl);
+
+					this._tick(cacheTtl);
 				}
 
 				throw error;
@@ -257,6 +255,8 @@ class CacheableLookup {
 		if (this.maxTtl > 0 && cacheTtl > 0) {
 			entries.expires = Date.now() + cacheTtl;
 			await this._cache.set(hostname, entries, cacheTtl);
+
+			this._tick(cacheTtl);
 		}
 
 		delete this._pending[hostname];
@@ -269,30 +269,45 @@ class CacheableLookup {
 		return entries[0];
 	}
 
-	tick() {
-		if (this._tickLocked) {
+	/* istanbul ignore next: deprecated */
+	tick() {}
+
+	_tick(ms) {
+		if (!(this._cache instanceof Map) || ms === undefined) {
 			return;
 		}
 
-		if (this._cache instanceof Map) {
-			const now = Date.now();
+		const nextRemovalTime = this._nextRemovalTime;
 
-			for (const [hostname, {expires}] of this._cache) {
-				if (now >= expires) {
-					this._cache.delete(hostname);
+		if (!nextRemovalTime || ms < nextRemovalTime) {
+			clearTimeout(this._removalTimeout);
+
+			this._nextRemovalTime = ms;
+
+			this._removalTimeout = setTimeout(() => {
+				this._nextRemovalTime = false;
+
+				let nextExpiry = Infinity;
+
+				const now = Date.now();
+
+				for (const [hostname, {expires}] of this._cache) {
+					if (now >= expires) {
+						this._cache.delete(hostname);
+					} else if (expires < nextExpiry) {
+						nextExpiry = expires;
+					}
 				}
+
+				if (nextExpiry !== Infinity) {
+					this._tick(nextExpiry - now);
+				}
+			}, ms);
+
+			/* istanbul ignore next: There is no `timeout.unref()` when running inside an Electron renderer */
+			if (this._removalTimeout.unref) {
+				this._removalTimeout.unref();
 			}
-		}
-
-		this._tickLocked = true;
-
-		const timeout = setTimeout(() => {
-			this._tickLocked = false;
-		}, this._lockTime);
-
-		/* istanbul ignore next: There is no `timeout.unref()` when running inside an Electron renderer */
-		if (timeout.unref) {
-			timeout.unref();
 		}
 	}
 

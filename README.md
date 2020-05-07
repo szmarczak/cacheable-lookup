@@ -188,7 +188,7 @@ Returns an array of objects with `address`, `family`, `ttl` and `expires` proper
 
 #### tick()
 
-Removes outdated entries. It's automatically called on every lookup.
+Deprecated - it is a noop. Outdated entries are removed automatically.
 
 #### updateInterfaceInfo()
 
@@ -208,12 +208,12 @@ Performed on:
 - CPU governor: performance
 
 ```
-CacheableLookup#lookupAsync                x 2,441,577 ops/sec ±0.57% (87 runs sampled)
-CacheableLookup#lookupAsync.all            x 2,539,120 ops/sec ±0.48% (88 runs sampled)
-CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,228,416 ops/sec ±0.31% (88 runs sampled)
-CacheableLookup#lookup                     x 2,374,110 ops/sec ±0.29% (89 runs sampled)
-CacheableLookup#lookup.all                 x 2,311,587 ops/sec ±0.38% (88 runs sampled)
-CacheableLookup#lookup.all.ADDRCONFIG      x 2,074,475 ops/sec ±0.41% (90 runs sampled)
+CacheableLookup#lookupAsync                x 2,421,707 ops/sec ±1.11% (86 runs sampled)
+CacheableLookup#lookupAsync.all            x 2,338,741 ops/sec ±1.74% (84 runs sampled)
+CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,238,534 ops/sec ±0.94% (89 runs sampled)
+CacheableLookup#lookup                     x 2,298,645 ops/sec ±1.26% (87 runs sampled)
+CacheableLookup#lookup.all                 x 2,260,194 ops/sec ±1.49% (87 runs sampled)
+CacheableLookup#lookup.all.ADDRCONFIG      x 2,133,142 ops/sec ±1.52% (86 runs sampled)
 dns#lookup                                 x 7,272     ops/sec ±0.36% (86 runs sampled)
 dns#lookup.all                             x 7,249     ops/sec ±0.40% (86 runs sampled)
 dns#lookup.all.ADDRCONFIG                  x 5,693     ops/sec ±0.28% (85 runs sampled)
