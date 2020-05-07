@@ -781,7 +781,7 @@ test.serial('double tick() has no effect', t => {
 	global.setTimeout = _setTimeout;
 });
 
-test.only('respects the `hosts` file', async t => {
+test('respects the `hosts` file', async t => {
 	const cacheable = new CacheableLookup({
 		customHostsPath: path.resolve(__dirname, 'hosts.txt')
 	});

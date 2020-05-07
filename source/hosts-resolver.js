@@ -18,50 +18,48 @@ const tabRegExp = /\t+/g;
 const startsWithWhitespaceRegExp = /^[^\S\r\n]+/gm;
 
 class HostsResolver {
-	constructor({
-		watching = false,
-		customHostsPath = hostsPath
-	}) {
+	constructor({watching, customHostsPath}) {
 		this._hostsPath = customHostsPath;
 		this._error = null;
 		this._watcher = null;
+		this._watching = Boolean(watching);
 		this._hosts = {};
 
-		if (watching) {
-				this._init();
-		}
+		this._init();
 	}
 
 	_init() {
-		this._promise = (async () => {
-			if (typeof this._hostsPath !== 'string') {
-				return;
-			}
+		if (typeof this._hostsPath !== 'string') {
+			return;
+		}
 
+		this._promise = (async () => {
 			await this._update();
 
 			if (this._error) {
 				return;
 			}
 
-			this._watcher = watch(this._hostsPath, {
-				persistent: false
-			}, eventType => {
-				if (eventType === 'change') {
-					this._update();
-				} else {
-					this._watcher.close();
-				}
-			});
+			if (this._watching) {
+				this._watcher = watch(this._hostsPath, {
+					persistent: false
+				}, eventType => {
+					if (eventType === 'change') {
+						this._update();
+					} else {
+						this._watcher.close();
+					}
+				});
 
-			this._watcher.once('error', error => {
-				this._error = error;
-				this._hosts = {};
-			});
+				this._watcher.once('error', error => {
+					this._error = error;
+					this._hosts = {};
+				});
 
-			this._watcher.once('close', () => {
-				this._init();
-			});
+				this._watcher.once('close', () => {
+					this._init();
+				});
+			}
 
 			this._promise = null;
 		})();
@@ -73,7 +71,6 @@ class HostsResolver {
 			lines = lines.replace(whitespaceRegExp, ' ');
 			lines = lines.replace(tabRegExp, ' ');
 			lines = lines.replace(startsWithWhitespaceRegExp, '');
-			console.log(lines);
 			lines = lines.split('\n');
 
 			this._hosts = {};
@@ -140,19 +137,24 @@ class HostsResolver {
 
 const resolvers = {};
 
-const getResolver = (customHostsPath = hostsPath) => {
-	if (typeof customHostsPath !== 'string') {
-		customHostsPath = false;
+const getResolver = (options = {
+	watching: false,
+	customHostsPath: hostsPath
+}) => {
+	if (typeof options.customHostsPath !== 'string') {
+		options.customHostsPath = false;
 	}
 
-	let resolver = resolvers[customHostsPath];
+	const id = `${options.customHostsPath}:${Boolean(options.watching)}`;
+
+	let resolver = resolvers[id];
 
 	if (resolver) {
 		return resolver;
 	}
 
-	resolver = new HostsResolver(customHostsPath);
-	resolvers[customHostsPath] = resolver;
+	resolver = new HostsResolver(options);
+	resolvers[id] = resolver;
 
 	return resolver;
 };

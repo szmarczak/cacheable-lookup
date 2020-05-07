@@ -57,6 +57,7 @@ const ttl = {ttl: true};
 class CacheableLookup {
 	constructor({
 		customHostsPath,
+		watchingHostsFile = false,
 		cache = new Map(),
 		maxTtl = Infinity,
 		resolver = new AsyncResolver(),
@@ -84,7 +85,7 @@ class CacheableLookup {
 		}
 
 		this._iface = getIfaceInfo();
-		this._hostsResolver = getHostsResolver(customHostsPath);
+		this._hostsResolver = getHostsResolver({customHostsPath, watching: watchingHostsFile});
 		this._tickLocked = false;
 
 		this._pending = {};
