@@ -5,11 +5,12 @@ const {
 	promises: {
 		Resolver: AsyncResolver
 	},
-	lookup
+	lookup: dnsLookup
 } = require('dns');
 const {promisify} = require('util');
 const os = require('os');
-const {getResolver: getHostsResolver} = require('./hosts-resolver');
+
+const lookup = promisify(dnsLookup);
 
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
@@ -53,25 +54,21 @@ const getIfaceInfo = () => {
 };
 
 const ttl = {ttl: true};
+const all = {all: true};
 
 class CacheableLookup {
 	constructor({
-		customHostsPath,
-		watchingHostsFile = false,
 		cache = new Map(),
 		maxTtl = Infinity,
 		resolver = new AsyncResolver(),
-		fallbackTtl = 1,
+		fallbackDuration = 3600,
 		errorTtl = 0.15
 	} = {}) {
 		this.maxTtl = maxTtl;
-		this.fallbackTtl = fallbackTtl;
 		this.errorTtl = errorTtl;
 
 		this._cache = cache;
 		this._resolver = resolver;
-
-		this._lookup = promisify(lookup);
 
 		if (this._resolver instanceof AsyncResolver) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
@@ -82,11 +79,21 @@ class CacheableLookup {
 		}
 
 		this._iface = getIfaceInfo();
-		this._hostsResolver = getHostsResolver({customHostsPath, watching: watchingHostsFile});
 
 		this._pending = {};
 
 		this._nextRemovalTime = false;
+
+		this._hostnamesToFallback = new Set();
+
+		/* istanbul ignore next: There is no `interval.unref()` when running inside an Electron renderer */
+		const interval = setInterval(() => {
+			this._hostnamesToFallback.clear();
+		}, fallbackDuration * 1000);
+
+		if (interval.unref) {
+			interval.unref();
+		}
 
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
@@ -164,15 +171,11 @@ class CacheableLookup {
 			return cached;
 		}
 
-		if (cached.length === 1) {
-			return cached[0];
-		}
-
-		return this._getEntry(cached, hostname);
+		return cached[0];
 	}
 
 	async query(hostname) {
-		let cached = await this._hostsResolver.get(hostname) || await this._cache.get(hostname);
+		let cached = await this._cache.get(hostname);
 
 		if (!cached) {
 			const pending = this._pending[hostname];
@@ -194,83 +197,108 @@ class CacheableLookup {
 		return cached;
 	}
 
-	async queryAndCache(hostname) {
+	async _resolve(hostname) {
 		// We could make an ANY query, but DNS servers may reject that.
-		const [As, AAAAs] = await Promise.all([this._resolve4(hostname, ttl).catch(() => []), this._resolve6(hostname, ttl).catch(() => [])]);
+		const [A, AAAA] = await Promise.all([
+			this._resolve4(hostname, ttl).catch(() => []),
+			this._resolve6(hostname, ttl).catch(() => [])
+		]);
 
 		let cacheTtl = 0;
 
-		if (As) {
-			for (const entry of As) {
-				entry.family = 4;
-				entry.expires = Date.now() + (entry.ttl * 1000);
+		const now = Date.now();
 
-				// Is the TTL the same for all entries?
-				cacheTtl = Math.max(cacheTtl, entry.ttl);
-			}
+		for (const entry of A) {
+			entry.family = 4;
+			entry.expires = now + (entry.ttl * 1000);
+
+			// Is the TTL the same for all entries?
+			cacheTtl = Math.max(cacheTtl, entry.ttl);
 		}
 
-		if (AAAAs) {
-			for (const entry of AAAAs) {
-				entry.family = 6;
-				entry.expires = Date.now() + (entry.ttl * 1000);
+		for (const entry of AAAA) {
+			entry.family = 6;
+			entry.expires = now + (entry.ttl * 1000);
 
-				// Is the TTL the same for all entries?
-				cacheTtl = Math.max(cacheTtl, entry.ttl);
-			}
+			// Is the TTL the same for all entries?
+			cacheTtl = Math.max(cacheTtl, entry.ttl);
 		}
 
-		let entries = [...(As || []), ...(AAAAs || [])];
+		return {
+			entries: [
+				...A,
+				...AAAA
+			],
+			cacheTtl,
+			isLookup: false
+		};
+	}
 
-		if (entries.length === 0) {
-			try {
-				entries = await this._lookup(hostname, {
-					all: true
-				});
+	async _lookup(hostname) {
+		const entries = await lookup(hostname, {
+			all: true
+		});
 
-				for (const entry of entries) {
-					entry.ttl = this.fallbackTtl;
-					entry.expires = Date.now() + (entry.ttl * 1000);
-				}
+		return {
+			entries,
+			cacheTtl: 0,
+			isLookup: true
+		};
+	}
 
-				cacheTtl = this.fallbackTtl * 1000;
-			} catch (error) {
-				delete this._pending[hostname];
-
-				if (error.code === 'ENOTFOUND') {
-					cacheTtl = this.errorTtl * 1000;
-
-					entries.expires = Date.now() + cacheTtl;
-					await this._cache.set(hostname, entries, cacheTtl);
-
-					this._tick(cacheTtl);
-				}
-
-				throw error;
-			}
-		} else {
-			cacheTtl = Math.min(this.maxTtl, cacheTtl) * 1000;
-		}
-
+	async _set(hostname, data, cacheTtl) {
 		if (this.maxTtl > 0 && cacheTtl > 0) {
-			entries.expires = Date.now() + cacheTtl;
-			await this._cache.set(hostname, entries, cacheTtl);
+			data.expires = Date.now() + cacheTtl;
+			await this._cache.set(hostname, data, cacheTtl);
 
 			this._tick(cacheTtl);
 		}
-
-		delete this._pending[hostname];
-
-		return entries;
 	}
 
-	// eslint-disable-next-line no-unused-vars
-	_getEntry(entries, hostname) {
-		return entries[0];
-	}
+	async queryAndCache(hostname) {
+		if (this._hostnamesToFallback.has(hostname)) {
+			return lookup(hostname, all);
+		}
 
-	/* istanbul ignore next: deprecated */
-	tick() {}
+		const resolverPromise = this._resolve(hostname);
+		const lookupPromise = this._lookup(hostname);
+
+		try {
+			const fastestQuery = await Promise.race([
+				resolverPromise,
+				lookupPromise
+			]);
+
+			(async () => {
+				try {
+					if (fastestQuery.isLookup) {
+						const realDnsQuery = await resolverPromise;
+
+						// If the DNS query failed
+						if (realDnsQuery.cacheTtl === 0) {
+							this._hostnamesToFallback.add(hostname);
+						} else {
+							await this._set(hostname, realDnsQuery.entries, realDnsQuery.cacheTtl);
+						}
+					} else {
+						await this._set(hostname, fastestQuery.entries, fastestQuery.cacheTtl);
+					}
+				} catch (_) {
+					// TODO: Make all further lookups throw
+				}
+
+				delete this._pending[hostname];
+			})();
+
+			return fastestQuery.entries;
+		} catch (error) {
+			if (error.code === 'ENOTFOUND') {
+				await this._cache.set(hostname, [], this.errorTtl * 1000);
+			}
+
+			throw error;
+		}
+	}
 
 	_tick(ms) {
 		if (!(this._cache instanceof Map) || ms === undefined) {
