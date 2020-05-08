@@ -2,6 +2,7 @@
 const {
 	V4MAPPED,
 	ADDRCONFIG,
+	ALL,
 	promises: {
 		Resolver: AsyncResolver
 	},
@@ -23,6 +24,10 @@ const verifyAgent = agent => {
 
 const map4to6 = entries => {
 	for (const entry of entries) {
+		if (entry.family === 6) {
+			continue;
+		}
+
 		entry.address = `::ffff:${entry.address}`;
 		entry.family = 6;
 	}
@@ -145,8 +150,16 @@ class CacheableLookup {
 		if (options.family === 6) {
 			const filtered = cached.filter(entry => entry.family === 6);
 
-			if (filtered.length === 0 && options.hints & V4MAPPED) {
-				map4to6(cached);
+			if (options.hints & V4MAPPED) {
+				if (options.hints & ALL) {
+					map4to6(cached);
+				} else {
+					if (filtered.length === 0) {
+						map4to6(cached);
+					} else {
+						cached = filtered;
+					}
+				}
 			} else {
 				cached = filtered;
 			}
