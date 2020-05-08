@@ -106,6 +106,13 @@ Default: `undefined` (OS-specific)
 
 The full path to the `hosts` file. Set this to `false` to prevent loading entries from the `hosts` file.
 
+##### options.watchingHostsFile
+
+Type: `boolean`<br>
+Default: `false`
+
+If set to `true`, it will watch the `hosts` file and update the cache.
+
 ### Entry object
 
 Type: `object`
