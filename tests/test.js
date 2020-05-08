@@ -1,5 +1,6 @@
 const {V4MAPPED, ADDRCONFIG} = require('dns');
 const {Resolver: AsyncResolver} = require('dns').promises;
+const fs = require('fs').promises;
 const {promisify} = require('util');
 const http = require('http');
 const path = require('path');
@@ -934,4 +935,35 @@ test('returns IPv6 if no other entries available', async t => {
 		address: '::ffff:127.0.0.2',
 		family: 6
 	});
+});
+
+test('hosts file watcher works', async t => {
+	const customHostsPath = path.resolve(__dirname, 'watching.txt');
+
+	await fs.writeFile(customHostsPath, '127.0.0.1 demo');
+
+	const cacheable = new CacheableLookup({
+		resolver,
+		customHostsPath,
+		watchingHostsFile: true
+	});
+
+	const first = await cacheable.lookupAsync('demo', {all: true});
+
+	await fs.writeFile(customHostsPath, '');
+
+	await new Promise(resolve => setTimeout(resolve, 100));
+
+	await t.throwsAsync(cacheable.lookupAsync('demo', {all: true}), {
+		code: 'ENOTFOUND'
+	});
+
+	t.deepEqual(first, [
+		{
+			address: '127.0.0.1',
+			family: 4,
+			ttl: Infinity,
+			expires: Infinity
+		}
+	]);
 });
