@@ -17,11 +17,11 @@ const fileOptions = {
 const whitespaceRegExp = /\s+/g;
 
 class HostsResolver {
-	constructor({watching, customHostsPath}) {
+	constructor({watching, customHostsPath = hostsPath}) {
 		this._hostsPath = customHostsPath;
 		this._error = null;
 		this._watcher = null;
-		this._watching = Boolean(watching);
+		this._watching = watching;
 		this._hosts = {};
 
 		this._init();
@@ -135,15 +135,14 @@ class HostsResolver {
 
 const resolvers = {};
 
-const getResolver = (options = {
-	watching: false,
-	customHostsPath: hostsPath
-}) => {
-	if (typeof options.customHostsPath !== 'string') {
-		options.customHostsPath = false;
+const getResolver = ({customHostsPath, watching}) => {
+	if (customHostsPath !== undefined && typeof customHostsPath !== 'string') {
+		customHostsPath = false;
 	}
 
-	const id = `${options.customHostsPath}:${Boolean(options.watching)}`;
+	watching = Boolean(watching);
+
+	const id = `${customHostsPath}:${watching}`;
 
 	let resolver = resolvers[id];
 
@@ -151,7 +150,7 @@ const getResolver = (options = {
 		return resolver;
 	}
 
-	resolver = new HostsResolver(options);
+	resolver = new HostsResolver({customHostsPath, watching});
 	resolvers[id] = resolver;
 
 	return resolver;
