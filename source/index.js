@@ -13,6 +13,7 @@ const os = require('os');
 
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
+const kExpires = Symbol('expires');
 
 const verifyAgent = agent => {
 	if (!(agent && typeof agent.createConnection === 'function')) {
@@ -297,7 +298,8 @@ class CacheableLookup {
 
 	async _set(hostname, data, cacheTtl) {
 		if (this.maxTtl > 0 && cacheTtl > 0) {
-			data.expires = Date.now() + cacheTtl;
+			cacheTtl = Math.min(cacheTtl, this.maxTtl) * 1000;
+			data[kExpires] = Date.now() + cacheTtl;
 
 			try {
 				await this._cache.set(hostname, data, cacheTtl);
@@ -345,7 +347,9 @@ class CacheableLookup {
 					}
 				} catch (_) {}
 			} else {
-				await this._set(hostname, query.entries, query.cacheTtl);
+				const cacheTtl = query.entries.length === 0 ? this.errorTtl : query.cacheTtl;
+
+				await this._set(hostname, query.entries, cacheTtl);
 			}
 
 			delete this._pending[hostname];
@@ -373,7 +377,9 @@ class CacheableLookup {
 
 				const now = Date.now();
 
-				for (const [hostname, {expires}] of this._cache) {
+				for (const [hostname, entries] of this._cache) {
+					const expires = entries[kExpires];
+
 					if (now >= expires) {
 						this._cache.delete(hostname);
 					} else if (expires < nextExpiry) {

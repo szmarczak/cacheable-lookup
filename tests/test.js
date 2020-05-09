@@ -727,8 +727,6 @@ test('custom cache support', async t => {
 
 	await sleep(entry.ttl * 1001);
 
-	cacheable.tick();
-
 	const newEntry = await cache.get('temporary');
 
 	t.is(newEntry, undefined);
@@ -768,8 +766,6 @@ test('errors are cached', async t => {
 	t.is(cacheable._cache.size, 1);
 
 	await sleep((cacheable.errorTtl * 1000) + 1);
-
-	cacheable.tick();
 
 	t.is(cacheable._cache.size, 0);
 });
