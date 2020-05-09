@@ -101,11 +101,11 @@ class CacheableLookup {
 		} else {
 			this._fallback = true;
 
-			/* istanbul ignore next: There is no `interval.unref()` when running inside an Electron renderer */
 			const interval = setInterval(() => {
 				this._hostnamesToFallback.clear();
 			}, fallbackDuration * 1000);
 
+			/* istanbul ignore next: There is no `interval.unref()` when running inside an Electron renderer */
 			if (interval.unref) {
 				interval.unref();
 			}
@@ -310,7 +310,7 @@ class CacheableLookup {
 			try {
 				await this._cache.set(hostname, data, cacheTtl);
 			} catch (error) {
-				this.lookupAsync = () => {
+				this.lookupAsync = async () => {
 					const cacheError = new Error('Cache Error. Please recreate the CacheableLookup instance.');
 					cacheError.cause = error;
 

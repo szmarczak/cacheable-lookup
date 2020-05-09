@@ -952,7 +952,7 @@ test('throws when the cache instance is broken', async t => {
 
 	await t.notThrowsAsync(cacheable.lookupAsync('localhost'));
 
-	await t.throwsAsync(cacheable.lookupAsync('localhost'), {
+	const error = await t.throwsAsync(cacheable.lookupAsync('localhost'), {
 		message: 'Cache Error. Please recreate the CacheableLookup instance.'
 	});
 
