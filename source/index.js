@@ -91,13 +91,19 @@ class CacheableLookup {
 
 		this._hostnamesToFallback = new Set();
 
-		/* istanbul ignore next: There is no `interval.unref()` when running inside an Electron renderer */
-		const interval = setInterval(() => {
-			this._hostnamesToFallback.clear();
-		}, fallbackDuration * 1000);
+		if (fallbackDuration < 1) {
+			this._fallback = false;
+		} else {
+			this._fallback = true;
 
-		if (interval.unref) {
-			interval.unref();
+			/* istanbul ignore next: There is no `interval.unref()` when running inside an Electron renderer */
+			const interval = setInterval(() => {
+				this._hostnamesToFallback.clear();
+			}, fallbackDuration * 1000);
+
+			if (interval.unref) {
+				interval.unref();
+			}
 		}
 
 		this.lookup = this.lookup.bind(this);
@@ -173,7 +179,7 @@ class CacheableLookup {
 		}
 
 		if (cached.length === 0) {
-			const error = new Error(`ENOTFOUND ${hostname}`);
+			const error = new Error(`cacheableLookup ENOTFOUND ${hostname}`);
 			error.code = 'ENOTFOUND';
 			error.hostname = hostname;
 
@@ -211,13 +217,26 @@ class CacheableLookup {
 	}
 
 	async _resolve(hostname) {
-		// We could make an ANY query, but DNS servers may reject that.
-		const [A, AAAA] = await Promise.all([
-			this._resolve4(hostname, ttl).catch(() => []),
-			this._resolve6(hostname, ttl).catch(() => [])
-		]);
+		const wrap = async promise => {
+			try {
+				return await promise;
+			} catch (error) {
+				if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
+					return [];
+				}
 
-		let cacheTtl = 0;
+				throw error;
+			}
+		};
+
+		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
+		const [A, AAAA] = await Promise.all([
+			this._resolve4(hostname, ttl),
+			this._resolve6(hostname, ttl)
+		].map(promise => wrap(promise)));
+
+		let aTTL = 0;
+		let aaaaTTL = 0;
 
 		const now = Date.now();
 
@@ -225,16 +244,14 @@ class CacheableLookup {
 			entry.family = 4;
 			entry.expires = now + (entry.ttl * 1000);
 
-			// Is the TTL the same for all entries?
-			cacheTtl = Math.max(cacheTtl, entry.ttl);
+			aTTL = Math.max(aTTL, entry.ttl);
 		}
 
 		for (const entry of AAAA) {
 			entry.family = 6;
 			entry.expires = now + (entry.ttl * 1000);
 
-			// Is the TTL the same for all entries?
-			cacheTtl = Math.max(cacheTtl, entry.ttl);
+			aaaaTTL = Math.max(aaaaTTL, entry.ttl);
 		}
 
 		return {
@@ -242,21 +259,35 @@ class CacheableLookup {
 				...A,
 				...AAAA
 			],
-			cacheTtl,
+			cacheTtl: Math.min(aTTl, aaaaTTL),
 			isLookup: false
 		};
 	}
 
 	async _lookup(hostname) {
-		const entries = await lookup(hostname, {
-			all: true
-		});
-
-		return {
-			entries,
+		const empty = {
+			entries: [],
 			cacheTtl: 0,
 			isLookup: true
 		};
+
+		if (!this._fallback) {
+			return empty;
+		}
+
+		try {
+			const entries = await lookup(hostname, {
+				all: true
+			});
+
+			return {
+				entries,
+				cacheTtl: 0,
+				isLookup: true
+			};
+		} catch (error) {
+			return empty;
+		}
 	}
 
 	async _set(hostname, data, cacheTtl) {
@@ -276,41 +307,36 @@ class CacheableLookup {
 		const resolverPromise = this._resolve(hostname);
 		const lookupPromise = this._lookup(hostname);
 
-		try {
-			const fastestQuery = await Promise.race([
-				resolverPromise,
-				lookupPromise
-			]);
+		let query = await Promise.race([
+			resolverPromise,
+			lookupPromise
+		]);
 
-			(async () => {
+		if (query.isLookup && query.entries.length === 0) {
+			query = await resolverPromise;
+		}
+
+		(async () => {
+			if (query.isLookup) {
 				try {
-					if (fastestQuery.isLookup) {
-						const realDnsQuery = await resolverPromise;
+					const realDnsQuery = await resolverPromise;
 
-						// If the DNS query failed
-						if (realDnsQuery.cacheTtl === 0) {
-							this._hostnamesToFallback.add(hostname);
-						} else {
-							await this._set(hostname, realDnsQuery.entries, realDnsQuery.cacheTtl);
-						}
+					// If no DNS entries found
+					if (realDnsQuery.entries.length === 0) {
+						// Use `dns.lookup(...)` for that particular hostname
+						this._hostnamesToFallback.add(hostname);
 					} else {
-						await this._set(hostname, fastestQuery.entries, fastestQuery.cacheTtl);
+						await this._set(hostname, realDnsQuery.entries, realDnsQuery.cacheTtl);
 					}
-				} catch (_) {
-					// TODO: Make all further lookups throw
-				}
-
-				delete this._pending[hostname];
-			})();
-
-			return fastestQuery.entries;
-		} catch (error) {
-			if (error.code === 'ENOTFOUND') {
-				await this._cache.set(hostname, [], this.errorTtl * 1000);
+				} catch (_) {}
+			} else {
+				await this._set(hostname, query.entries, query.cacheTtl);
 			}
 
-			throw error;
-		}
+			delete this._pending[hostname];
+		})();
+
+		return query.entries;
 	}
 
 	_tick(ms) {
