@@ -188,6 +188,9 @@ const createResolver = () => {
 				multiple: [
 					{address: '127.0.0.127', family: 4, ttl: 0},
 					{address: '127.0.0.128', family: 4, ttl: 0}
+				],
+				outdated: [
+					{address: '127.0.0.1', family: 4, ttl: 1}
 				]
 			},
 			'192.168.0.100': {
@@ -200,6 +203,9 @@ const createResolver = () => {
 			osHostname: [
 				{address: '127.0.0.1', family: 4},
 				{address: '127.0.0.2', family: 4}
+			],
+			outdated: [
+				{address: '127.0.0.127', family: 4}
 			]
 		},
 		get counter() {
@@ -782,6 +788,31 @@ test.serial('fallback works', async t => {
 		4: 1,
 		lookup: 2
 	});
+});
+
+test('fallback works #2', async t => {
+	const resolver = createResolver({delay: 0});
+	const cacheable = new CacheableLookup({
+		resolver,
+		fallbackDuration: 3600,
+		lookup: resolver.lookup
+	});
+
+	{
+		const entries = await cacheable.lookupAsync('outdated', {all: true});
+		t.deepEqual(entries, [
+			{address: '127.0.0.127', family: 4}
+		]);
+	}
+
+	await new Promise(resolve => setTimeout(resolve, 100));
+
+	{
+		const entries = await cacheable.lookupAsync('outdated', {all: true});
+		verify(t, entries, [
+			{address: '127.0.0.1', family: 4}
+		]);
+	}
 });
 
 test('fallback can be turned off', async t => {
