@@ -324,17 +324,19 @@ test('V4MAPPED hint', async t => {
 	}
 });
 
-test('ALL hint', async t => {
-	const cacheable = new CacheableLookup({resolver});
+if (process.versions.node.split('.')[0] >= 14) {
+	test('ALL hint', async t => {
+		const cacheable = new CacheableLookup({resolver});
 
-	// ALL
-	const entries = await cacheable.lookupAsync('localhost', {family: 6, hints: V4MAPPED | ALL, all: true});
+		// ALL
+		const entries = await cacheable.lookupAsync('localhost', {family: 6, hints: V4MAPPED | ALL, all: true});
 
-	verify(t, entries, [
-		{address: '::ffff:127.0.0.1', family: 6, ttl: 60},
-		{address: '::ffff:127.0.0.2', family: 6, ttl: 60}
-	]);
-});
+		verify(t, entries, [
+			{address: '::ffff:127.0.0.1', family: 6, ttl: 60},
+			{address: '::ffff:127.0.0.2', family: 6, ttl: 60}
+		]);
+	});
+}
 
 test('ADDRCONFIG hint', async t => {
 	//=> has6 = false, family = 6

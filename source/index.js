@@ -15,6 +15,8 @@ const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
 const kExpires = Symbol('expires');
 
+const supportsALL = typeof ALL === 'number';
+
 const verifyAgent = agent => {
 	if (!(agent && typeof agent.createConnection === 'function')) {
 		throw new Error('Expected an Agent instance as the first argument');
@@ -160,7 +162,7 @@ class CacheableLookup {
 			const filtered = cached.filter(entry => entry.family === 6);
 
 			if (options.hints & V4MAPPED) {
-				if (options.hints & ALL || filtered.length === 0) {
+				if ((supportsALL && options.hints & ALL) || filtered.length === 0) {
 					map4to6(cached);
 				} else {
 					cached = filtered;
