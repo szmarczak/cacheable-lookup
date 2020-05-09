@@ -259,7 +259,7 @@ class CacheableLookup {
 				...A,
 				...AAAA
 			],
-			cacheTtl: Math.min(aTTl, aaaaTTL),
+			cacheTtl: Math.min(aTTL, aaaaTTL),
 			isLookup: false
 		};
 	}
