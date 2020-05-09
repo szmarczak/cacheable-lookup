@@ -57,6 +57,10 @@ const getIfaceInfo = () => {
 	return {has4, has6};
 };
 
+const isIterable = map => {
+	return Symbol.iterator in map;
+};
+
 const ttl = {ttl: true};
 const all = {all: true};
 
@@ -312,7 +316,9 @@ class CacheableLookup {
 				};
 			}
 
-			this._tick(cacheTtl);
+			if (isIterable(this._cache)) {
+				this._tick(cacheTtl);
+			}
 		}
 	}
 
@@ -359,10 +365,6 @@ class CacheableLookup {
 	}
 
 	_tick(ms) {
-		if (!(this._cache instanceof Map) || ms === undefined) {
-			return;
-		}
-
 		const nextRemovalTime = this._nextRemovalTime;
 
 		if (!nextRemovalTime || ms < nextRemovalTime) {
