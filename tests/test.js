@@ -298,8 +298,15 @@ test('V4MAPPED hint', async t => {
 	await t.throwsAsync(cacheable.lookupAsync('static4', {family: 6}), {code: 'ENOTFOUND'});
 
 	// V4MAPPED
-	const entries = await cacheable.lookupAsync('static4', {family: 6, hints: V4MAPPED});
-	verify(t, entries, {address: '::ffff:127.0.0.1', family: 6});
+	{
+		const entries = await cacheable.lookupAsync('static4', {family: 6, hints: V4MAPPED});
+		verify(t, entries, {address: '::ffff:127.0.0.1', family: 6});
+	}
+
+	{
+		const entries = await cacheable.lookupAsync('localhost', {family: 6, hints: V4MAPPED});
+		verify(t, entries, {address: '::ffff:127.0.0.2', family: 6});
+	}
 });
 
 test('ALL hint', async t => {
