@@ -293,7 +293,17 @@ class CacheableLookup {
 	async _set(hostname, data, cacheTtl) {
 		if (this.maxTtl > 0 && cacheTtl > 0) {
 			data.expires = Date.now() + cacheTtl;
-			await this._cache.set(hostname, data, cacheTtl);
+
+			try {
+				await this._cache.set(hostname, data, cacheTtl);
+			} catch (error) {
+				this.lookupAsync = () => {
+					const cacheError = new Error('Cache Error. Please recreate the CacheableLookup instance.');
+					cacheError.cause = error;
+
+					throw cacheError;
+				};
+			}
 
 			this._tick(cacheTtl);
 		}
