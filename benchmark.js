@@ -51,5 +51,7 @@ suite.add('CacheableLookup#lookupAsync', deferred => {
 (async () => {
 	await cacheable.lookupAsync(query);
 
+	await new Promise(resolve => setTimeout(resolve, 150));
+
 	suite.run();
 })();

@@ -16,6 +16,7 @@ Making lots of HTTP requests? You can save some time by caching DNS lookups :zap
 ```js
 const http = require('http');
 const CacheableLookup = require('cacheable-lookup');
+
 const cacheable = new CacheableLookup();
 
 http.get('http://example.com', {lookup: cacheable.lookup}, response => {
@@ -28,8 +29,8 @@ http.get('http://example.com', {lookup: cacheable.lookup}, response => {
 ```js
 const http = require('http');
 const CacheableLookup = require('cacheable-lookup');
-const cacheable = new CacheableLookup();
 
+const cacheable = new CacheableLookup();
 cacheable.install(http.globalAgent);
 
 http.get('http://example.com', response => {
@@ -43,7 +44,14 @@ http.get('http://example.com', response => {
 
 Returns a new instance of `CacheableLookup`.
 
-#### cache
+#### options
+
+Type: `object`<br>
+Default: `{}`
+
+Options used to cache the DNS lookups.
+
+##### cache
 
 Type: `Map` | [`Keyv`](https://github.com/lukechilds/keyv/)<br>
 Default: `new Map()`
@@ -52,12 +60,21 @@ Custom cache instance. If `undefined`, it will create a new one.
 
 **Note**: If you decide to use Keyv instead of the native implementation, the performance will drop by 10x. Memory leaks may occur as it doesn't provide any way to remove all the deprecated values at once.
 
-#### options
+**Tip**: [`QuickLRU`](https://github.com/sindresorhus/quick-lru) is fully compatible with the Map API, you can use it to limit the amount of cached entries. Example:
 
-Type: `object`<br>
-Default: `{}`
+```js
+const http = require('http');
+const CacheableLookup = require('cacheable-lookup');
+const QuickLRU = require('quick-lru');
 
-Options used to cache the DNS lookups.
+const cacheable = new CacheableLookup({
+	cache: new QuickLRU({maxSize: 1000})
+});
+
+http.get('http://example.com', {lookup: cacheable.lookup}, response => {
+	// Handle the response here
+});
+```
 
 ##### options.maxTtl
 
@@ -70,23 +87,21 @@ If set to `0`, it will make a new DNS query each time.
 
 **Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. For example, if you use Cloudflare, this value should be greater than `0.01`.
 
-##### options.fallbackTtl
+##### options.fallbackDuration
 
 Type: `number`<br>
-Default: `1`
+Default: `3600` (1 hour)
 
-The lifetime of the entries received from the OS (TTL in seconds).
+When the DNS server responds with `ENOTFOUND` or `ENODATA` and the OS reports that the entry is available, it will use `dns.lookup(...)` directly for the requested hostnames for the specified amount of time (in seconds).
 
-**Note**: This option is independent, `options.maxTtl` does not affect this.
-
-**Pro Tip**: This shouldn't be lower than your DNS server response time in order to prevent bottlenecks. For example, if you use Cloudflare, this value should be greater than `0.01`.
+If you don't query internal hostnames (such as `localhost`, `database.local` etc.), it is strongly recommended to set this value to `0`.
 
 ##### options.errorTtl
 
 Type: `number`<br>
 Default: `0.15`
 
-The time how long it needs to remember queries that threw `ENOTFOUND` (TTL in seconds).
+The time how long it needs to remember queries that threw `ENOTFOUND` or `ENODATA` (TTL in seconds).
 
 **Note**: This option is independent, `options.maxTtl` does not affect this.
 
@@ -99,19 +114,14 @@ Default: [`new dns.promises.Resolver()`](https://nodejs.org/api/dns.html#dns_cla
 
 An instance of [DNS Resolver](https://nodejs.org/api/dns.html#dns_class_dns_resolver) used to make DNS queries.
 
-##### options.customHostsPath
+##### options.lookup
 
-Type: `string`<br>
-Default: `undefined` (OS-specific)
+Type: `Function`<br>
+Default: [`dns.lookup`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback)
 
-The full path to the `hosts` file. Set this to `false` to prevent loading entries from the `hosts` file.
+The fallback function to use when the DNS server responds with `ENOTFOUND` or `ENODATA`.
 
-##### options.watchingHostsFile
-
-Type: `boolean`<br>
-Default: `false`
-
-If set to `true`, it will watch the `hosts` file and update the cache.
+**Note**: This has no effect if the `fallbackDuration` option is less than `1`.
 
 ### Entry object
 
@@ -133,13 +143,13 @@ The IP family (`4` or `6`).
 
 Type: `number`
 
-**Note**: This is not present when using the native `dns.lookup(...)`!
+**Note**: This is not present when falling back to `dns.lookup(...)`!
 
 The timestamp (`Date.now() + ttl * 1000`) when the entry expires.
 
 #### ttl
 
-**Note**: This is not present when using the native `dns.lookup(...)`!
+**Note**: This is not present when falling back to `dns.lookup(...)`!
 
 The time in seconds for its lifetime.
 
@@ -154,7 +164,7 @@ When `options.all` is `true`, then `callback(error, entries)` is called.
 
 Type: `Array`
 
-The DNS servers used to make queries. Can be overridden - doing so will trigger `cacheableLookup.updateInterfaceInfo()`.
+The DNS servers used to make queries. Can be overridden - doing so will clear the cache.
 
 #### [lookup(hostname, options, callback)](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback)
 
@@ -164,8 +174,6 @@ The asynchronous version of `dns.lookup(…)`.
 
 Returns an [entry object](#entry-object).<br>
 If `options.all` is true, returns an array of entry objects.
-
-**Note**: If entry(ies) were not found, it will return `undefined` by default.
 
 ##### hostname
 
@@ -193,19 +201,15 @@ This is used by `query(hostname)` if no entry in the database is present.
 
 Returns an array of objects with `address`, `family`, `ttl` and `expires` properties.
 
-#### tick()
-
-Deprecated - it is a noop. Outdated entries are removed automatically.
-
 #### updateInterfaceInfo()
 
 Updates interface info. For example, you need to run this when you plug or unplug your WiFi driver.
 
-**Note:** Running `updateInterfaceInfo()` will also trigger `clear()`!
+**Note:** Running `updateInterfaceInfo()` will trigger `clear()` only on network interface removal.
 
 #### clear(hostname?)
 
-Clears the cache for the given hostname. If the hostname argument is not present, the entire cache will be cleared.
+Clears the cache for the given hostname. If the hostname argument is not present, the entire cache will be emptied.
 
 ## High performance
 
@@ -215,23 +219,17 @@ Performed on:
 - CPU governor: performance
 
 ```
-CacheableLookup#lookupAsync                x 2,421,707 ops/sec ±1.11% (86 runs sampled)
-CacheableLookup#lookupAsync.all            x 2,338,741 ops/sec ±1.74% (84 runs sampled)
-CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,238,534 ops/sec ±0.94% (89 runs sampled)
-CacheableLookup#lookup                     x 2,298,645 ops/sec ±1.26% (87 runs sampled)
-CacheableLookup#lookup.all                 x 2,260,194 ops/sec ±1.49% (87 runs sampled)
-CacheableLookup#lookup.all.ADDRCONFIG      x 2,133,142 ops/sec ±1.52% (86 runs sampled)
+CacheableLookup#lookupAsync                x 2,896,251 ops/sec ±1.07% (85 runs sampled)
+CacheableLookup#lookupAsync.all            x 2,842,664 ops/sec ±1.11% (88 runs sampled)
+CacheableLookup#lookupAsync.all.ADDRCONFIG x 2,598,283 ops/sec ±1.21% (88 runs sampled)
+CacheableLookup#lookup                     x 2,565,913 ops/sec ±1.56% (85 runs sampled)
+CacheableLookup#lookup.all                 x 2,609,039 ops/sec ±1.01% (86 runs sampled)
+CacheableLookup#lookup.all.ADDRCONFIG      x 2,416,242 ops/sec ±0.89% (85 runs sampled)
 dns#lookup                                 x 7,272     ops/sec ±0.36% (86 runs sampled)
 dns#lookup.all                             x 7,249     ops/sec ±0.40% (86 runs sampled)
 dns#lookup.all.ADDRCONFIG                  x 5,693     ops/sec ±0.28% (85 runs sampled)
 Fastest is CacheableLookup#lookupAsync.all
 ```
-
-The package is based on [`dns.resolve4(…)`](https://nodejs.org/api/dns.html#dns_dns_resolve4_hostname_options_callback) and [`dns.resolve6(…)`](https://nodejs.org/api/dns.html#dns_dns_resolve6_hostname_options_callback).
-
-[Why not `dns.lookup(…)`?](https://github.com/nodejs/node/issues/25560#issuecomment-455596215)
-
-> It is not possible to use `dns.lookup(…)` because underlying calls like [getaddrinfo](http://man7.org/linux/man-pages/man3/getaddrinfo.3.html) have no concept of servers or TTL (caching is done on OS level instead).
 
 ## Related
 

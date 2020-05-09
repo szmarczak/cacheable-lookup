@@ -2,17 +2,20 @@
 const {
 	V4MAPPED,
 	ADDRCONFIG,
+	ALL,
 	promises: {
 		Resolver: AsyncResolver
 	},
-	lookup
+	lookup: dnsLookup
 } = require('dns');
 const {promisify} = require('util');
 const os = require('os');
-const {getResolver: getHostsResolver} = require('./hosts-resolver');
 
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
+const kExpires = Symbol('expires');
+
+const supportsALL = typeof ALL === 'number';
 
 const verifyAgent = agent => {
 	if (!(agent && typeof agent.createConnection === 'function')) {
@@ -22,6 +25,10 @@ const verifyAgent = agent => {
 
 const map4to6 = entries => {
 	for (const entry of entries) {
+		if (entry.family === 6) {
+			continue;
+		}
+
 		entry.address = `::ffff:${entry.address}`;
 		entry.family = 6;
 	}
@@ -52,26 +59,28 @@ const getIfaceInfo = () => {
 	return {has4, has6};
 };
 
+const isIterable = map => {
+	return Symbol.iterator in map;
+};
+
 const ttl = {ttl: true};
+const all = {all: true};
 
 class CacheableLookup {
 	constructor({
-		customHostsPath,
-		watchingHostsFile = false,
 		cache = new Map(),
 		maxTtl = Infinity,
+		fallbackDuration = 3600,
+		errorTtl = 0.15,
 		resolver = new AsyncResolver(),
-		fallbackTtl = 1,
-		errorTtl = 0.15
+		lookup = dnsLookup
 	} = {}) {
 		this.maxTtl = maxTtl;
-		this.fallbackTtl = fallbackTtl;
 		this.errorTtl = errorTtl;
 
 		this._cache = cache;
 		this._resolver = resolver;
-
-		this._lookup = promisify(lookup);
+		this._dnsLookup = promisify(lookup);
 
 		if (this._resolver instanceof AsyncResolver) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
@@ -82,18 +91,32 @@ class CacheableLookup {
 		}
 
 		this._iface = getIfaceInfo();
-		this._hostsResolver = getHostsResolver({customHostsPath, watching: watchingHostsFile});
 
 		this._pending = {};
-
 		this._nextRemovalTime = false;
+		this._hostnamesToFallback = new Set();
+
+		if (fallbackDuration < 1) {
+			this._fallback = false;
+		} else {
+			this._fallback = true;
+
+			const interval = setInterval(() => {
+				this._hostnamesToFallback.clear();
+			}, fallbackDuration * 1000);
+
+			/* istanbul ignore next: There is no `interval.unref()` when running inside an Electron renderer */
+			if (interval.unref) {
+				interval.unref();
+			}
+		}
 
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
 	}
 
 	set servers(servers) {
-		this.updateInterfaceInfo();
+		this.clear();
 
 		this._resolver.setServers(servers);
 	}
@@ -138,8 +161,12 @@ class CacheableLookup {
 		if (options.family === 6) {
 			const filtered = cached.filter(entry => entry.family === 6);
 
-			if (filtered.length === 0 && options.hints & V4MAPPED) {
-				map4to6(cached);
+			if (options.hints & V4MAPPED) {
+				if ((supportsALL && options.hints & ALL) || filtered.length === 0) {
+					map4to6(cached);
+				} else {
+					cached = filtered;
+				}
 			} else {
 				cached = filtered;
 			}
@@ -153,7 +180,7 @@ class CacheableLookup {
 		}
 
 		if (cached.length === 0) {
-			const error = new Error(`ENOTFOUND ${hostname}`);
+			const error = new Error(`cacheableLookup ENOTFOUND ${hostname}`);
 			error.code = 'ENOTFOUND';
 			error.hostname = hostname;
 
@@ -164,15 +191,11 @@ class CacheableLookup {
 			return cached;
 		}
 
-		if (cached.length === 1) {
-			return cached[0];
-		}
-
-		return this._getEntry(cached, hostname);
+		return cached[0];
 	}
 
 	async query(hostname) {
-		let cached = await this._hostsResolver.get(hostname) || await this._cache.get(hostname);
+		let cached = await this._cache.get(hostname);
 
 		if (!cached) {
 			const pending = this._pending[hostname];
@@ -194,89 +217,156 @@ class CacheableLookup {
 		return cached;
 	}
 
-	async queryAndCache(hostname) {
-		// We could make an ANY query, but DNS servers may reject that.
-		const [As, AAAAs] = await Promise.all([this._resolve4(hostname, ttl).catch(() => []), this._resolve6(hostname, ttl).catch(() => [])]);
-
-		let cacheTtl = 0;
-
-		if (As) {
-			for (const entry of As) {
-				entry.family = 4;
-				entry.expires = Date.now() + (entry.ttl * 1000);
-
-				// Is the TTL the same for all entries?
-				cacheTtl = Math.max(cacheTtl, entry.ttl);
-			}
-		}
-
-		if (AAAAs) {
-			for (const entry of AAAAs) {
-				entry.family = 6;
-				entry.expires = Date.now() + (entry.ttl * 1000);
-
-				// Is the TTL the same for all entries?
-				cacheTtl = Math.max(cacheTtl, entry.ttl);
-			}
-		}
-
-		let entries = [...(As || []), ...(AAAAs || [])];
-
-		if (entries.length === 0) {
+	async _resolve(hostname) {
+		const wrap = async promise => {
 			try {
-				entries = await this._lookup(hostname, {
-					all: true
-				});
-
-				for (const entry of entries) {
-					entry.ttl = this.fallbackTtl;
-					entry.expires = Date.now() + (entry.ttl * 1000);
-				}
-
-				cacheTtl = this.fallbackTtl * 1000;
+				return await promise;
 			} catch (error) {
-				delete this._pending[hostname];
-
-				if (error.code === 'ENOTFOUND') {
-					cacheTtl = this.errorTtl * 1000;
-
-					entries.expires = Date.now() + cacheTtl;
-					await this._cache.set(hostname, entries, cacheTtl);
-
-					this._tick(cacheTtl);
+				if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
+					return [];
 				}
 
 				throw error;
 			}
+		};
+
+		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
+		const [A, AAAA] = await Promise.all([
+			this._resolve4(hostname, ttl),
+			this._resolve6(hostname, ttl)
+		].map(promise => wrap(promise)));
+
+		let aTtl = 0;
+		let aaaaTtl = 0;
+		let cacheTtl = 0;
+
+		const now = Date.now();
+
+		for (const entry of A) {
+			entry.family = 4;
+			entry.expires = now + (entry.ttl * 1000);
+
+			aTtl = Math.max(aTtl, entry.ttl);
+		}
+
+		for (const entry of AAAA) {
+			entry.family = 6;
+			entry.expires = now + (entry.ttl * 1000);
+
+			aaaaTtl = Math.max(aaaaTtl, entry.ttl);
+		}
+
+		if (A.length > 0) {
+			if (AAAA.length > 0) {
+				cacheTtl = Math.min(aTtl, aaaaTtl);
+			} else {
+				cacheTtl = aTtl;
+			}
 		} else {
-			cacheTtl = Math.min(this.maxTtl, cacheTtl) * 1000;
+			cacheTtl = aaaaTtl;
 		}
 
+		return {
+			entries: [
+				...A,
+				...AAAA
+			],
+			cacheTtl,
+			isLookup: false
+		};
+	}
+
+	async _lookup(hostname) {
+		const empty = {
+			entries: [],
+			cacheTtl: 0,
+			isLookup: true
+		};
+
+		if (!this._fallback) {
+			return empty;
+		}
+
+		try {
+			const entries = await this._dnsLookup(hostname, {
+				all: true
+			});
+
+			return {
+				entries,
+				cacheTtl: 0,
+				isLookup: true
+			};
+		} catch (_) {
+			return empty;
+		}
+	}
+
+	async _set(hostname, data, cacheTtl) {
 		if (this.maxTtl > 0 && cacheTtl > 0) {
-			entries.expires = Date.now() + cacheTtl;
-			await this._cache.set(hostname, entries, cacheTtl);
+			cacheTtl = Math.min(cacheTtl, this.maxTtl) * 1000;
+			data[kExpires] = Date.now() + cacheTtl;
 
-			this._tick(cacheTtl);
+			try {
+				await this._cache.set(hostname, data, cacheTtl);
+			} catch (error) {
+				this.lookupAsync = async () => {
+					const cacheError = new Error('Cache Error. Please recreate the CacheableLookup instance.');
+					cacheError.cause = error;
+
+					throw cacheError;
+				};
+			}
+
+			if (isIterable(this._cache)) {
+				this._tick(cacheTtl);
+			}
+		}
+	}
+
+	async queryAndCache(hostname) {
+		if (this._hostnamesToFallback.has(hostname)) {
+			return this._dnsLookup(hostname, all);
 		}
 
-		delete this._pending[hostname];
+		const resolverPromise = this._resolve(hostname);
+		const lookupPromise = this._lookup(hostname);
 
-		return entries;
+		let query = await Promise.race([
+			resolverPromise,
+			lookupPromise
+		]);
+
+		if (query.isLookup && query.entries.length === 0) {
+			query = await resolverPromise;
+		}
+
+		(async () => {
+			if (query.isLookup) {
+				try {
+					const realDnsQuery = await resolverPromise;
+
+					// If no DNS entries found
+					if (realDnsQuery.entries.length === 0) {
+						// Use `dns.lookup(...)` for that particular hostname
+						this._hostnamesToFallback.add(hostname);
+					} else {
+						await this._set(hostname, realDnsQuery.entries, realDnsQuery.cacheTtl);
+					}
+				} catch (_) {}
+			} else {
+				const cacheTtl = query.entries.length === 0 ? this.errorTtl : query.cacheTtl;
+
+				await this._set(hostname, query.entries, cacheTtl);
+			}
+
+			delete this._pending[hostname];
+		})();
+
+		return query.entries;
 	}
-
-	// eslint-disable-next-line no-unused-vars
-	_getEntry(entries, hostname) {
-		return entries[0];
-	}
-
-	/* istanbul ignore next: deprecated */
-	tick() {}
 
 	_tick(ms) {
-		if (!(this._cache instanceof Map) || ms === undefined) {
-			return;
-		}
-
 		const nextRemovalTime = this._nextRemovalTime;
 
 		if (!nextRemovalTime || ms < nextRemovalTime) {
@@ -291,7 +381,9 @@ class CacheableLookup {
 
 				const now = Date.now();
 
-				for (const [hostname, {expires}] of this._cache) {
+				for (const [hostname, entries] of this._cache) {
+					const expires = entries[kExpires];
+
 					if (now >= expires) {
 						this._cache.delete(hostname);
 					} else if (expires < nextExpiry) {
@@ -346,8 +438,13 @@ class CacheableLookup {
 	}
 
 	updateInterfaceInfo() {
+		const {_iface} = this;
+
 		this._iface = getIfaceInfo();
-		this._cache.clear();
+
+		if ((_iface.has4 && !this._iface.has4) || (_iface.has6 && !this._iface.has6)) {
+			this._cache.clear();
+		}
 	}
 
 	clear(hostname) {
