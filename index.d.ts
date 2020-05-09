@@ -1,4 +1,4 @@
-import {Resolver, promises as dnsPromises} from 'dns';
+import {Resolver, promises as dnsPromises, lookup} from 'dns';
 import {Agent} from 'http';
 
 type AsyncResolver = dnsPromises.Resolver;
@@ -8,7 +8,7 @@ export type IPFamily = 4 | 6;
 type TPromise<T> = T | Promise<T>;
 
 export interface CacheInstance {
-	set(hostname: string, entries: EntryObject[], ttl: number): TPromise<void | boolean>;
+	set(hostname: string, entries: EntryObject[], ttl: number): TPromise<void | boolean | this>;
 	get(hostname: string): TPromise<EntryObject[] | undefined>;
 	delete(hostname: string): TPromise<boolean>;
 	clear(): TPromise<void>;
@@ -31,17 +31,14 @@ export interface Options {
 	 */
 	resolver?: Resolver | AsyncResolver;
 	/**
-	 * The full path to the `hosts` file. Set this to `false` to prevent loading entries from the `hosts` file.
-	 * @default '/etc/hosts'
-	 */
-	customHostsPath?: string | false;
-	/**
-	 * The lifetime of the entries received from the OS (TTL in seconds).
+	 * When the DNS server responds with `ENOTFOUND` or `ENODATA` and the OS reports that the entry is available,
+	 * it will use `dns.lookup(...)` directly for the requested hostnames for the specified amount of time (in seconds).
 	 *
-	 * **Note**: This option is independent, `options.maxTtl` does not affect this.
-	 * @default 1
+	 * If you don't query internal hostnames (such as `localhost`, `database.local` etc.),
+	 * it is strongly recommended to set this value to `0`.
+	 * @default 3600
 	 */
-	fallbackTtl?: number;
+	fallbackDuration?: number;
 	/**
 	 * The time how long it needs to remember failed queries (TTL in seconds).
 	 *
@@ -49,6 +46,13 @@ export interface Options {
 	 * @default 0.15
 	 */
 	errorTtl?: number;
+	/**
+	 * The fallback function to use when the DNS server responds with `ENOTFOUND` or `ENODATA`.
+	 *
+	 * **Note**: This has no effect if the `fallbackDuration` option is less than `1`.
+	 * @default dns.lookup
+	 */
+	lookup?: typeof lookup;
 }
 
 export interface EntryObject {
@@ -63,11 +67,11 @@ export interface EntryObject {
 	/**
 	 * The original TTL.
 	 */
-	readonly ttl: number;
+	readonly ttl?: number;
 	/**
 	 * The expiration timestamp.
 	 */
-	readonly expires: number;
+	readonly expires?: number;
 }
 
 export interface LookupOptions {
@@ -89,7 +93,7 @@ export interface LookupOptions {
 export default class CacheableLookup {
 	constructor(options?: Options);
 	/**
-	 * DNS servers used to make the query. Can be overridden - then the new servers will be used.
+	 * The DNS servers used to make queries. Can be overridden - doing so will clear the cache.
 	 */
 	servers: string[];
 	/**
@@ -115,15 +119,6 @@ export default class CacheableLookup {
 	 */
 	queryAndCache(hostname: string): Promise<ReadonlyArray<EntryObject>>;
 	/**
-	 * Returns an entry from the array for the given hostname.
-	 * Useful to implement a round-robin algorithm.
-	 */
-	_getEntry(entries: ReadonlyArray<EntryObject>, hostname: string): EntryObject;
-	/**
-	 * Removes outdated entries.
-	 */
-	tick(): void;
-	/**
 	 * Attaches itself to an Agent instance.
 	 */
 	install(agent: Agent): void;
@@ -133,10 +128,12 @@ export default class CacheableLookup {
 	uninstall(agent: Agent): void;
 	/**
 	 * Updates interface info. For example, you need to run this when you plug or unplug your WiFi driver.
+	 *
+	 * **Note:** Running `updateInterfaceInfo()` will trigger `clear()` only on network interface removal.
 	 */
 	updateInterfaceInfo(): void;
 	/**
-	 * Clears the cache for the given hostname. If the hostname argument is not present, the entire cache will be cleared.
+	 * Clears the cache for the given hostname. If the hostname argument is not present, the entire cache will be emptied.
 	 */
 	clear(hostname?: string): void;
 }

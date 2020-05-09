@@ -2,6 +2,7 @@ import {Resolver} from 'dns';
 import {Agent} from 'https';
 import {expectType} from 'tsd';
 import Keyv = require('keyv');
+import QuickLRU = require('quick-lru');
 import CacheableLookup, {EntryObject} from '.';
 
 (async () => {
@@ -10,8 +11,15 @@ import CacheableLookup, {EntryObject} from '.';
 
 	new CacheableLookup({
 		cache: new Keyv(),
-		customHostsPath: false,
-		fallbackTtl: 0,
+		fallbackDuration: 0,
+		errorTtl: 0,
+		maxTtl: 0,
+		resolver: new Resolver()
+	});
+
+	new CacheableLookup({
+		cache: new QuickLRU({maxSize: 100}),
+		fallbackDuration: 0,
 		errorTtl: 0,
 		maxTtl: 0,
 		resolver: new Resolver()
@@ -44,9 +52,10 @@ import CacheableLookup, {EntryObject} from '.';
 	expectType<ReadonlyArray<EntryObject>>(await cacheable.queryAndCache('localhost'));
 
 	expectType<void>(cacheable.updateInterfaceInfo());
-	expectType<void>(cacheable.tick());
 	expectType<void>(cacheable.install(agent));
 	expectType<void>(cacheable.uninstall(agent));
 	expectType<void>(cacheable.clear('localhost'));
 	expectType<void>(cacheable.clear());
+
+	cacheable.servers = ['127.0.0.1'];
 })();
