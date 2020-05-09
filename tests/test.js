@@ -938,3 +938,23 @@ test('full-featured custom cache', async t => {
 
 	t.is(cache.size, 1);
 });
+
+test('throws when the cache instance is broken', async t => {
+	const cacheable = new CacheableLookup({
+		resolver,
+		cache: {
+			get: () => {},
+			set: () => {
+				throw new Error('Something broke.');
+			}
+		}
+	});
+
+	await t.notThrowsAsync(cacheable.lookupAsync('localhost'));
+
+	await t.throwsAsync(cacheable.lookupAsync('localhost'), {
+		message: 'Cache Error. Please recreate the CacheableLookup instance.'
+	});
+
+	t.is(error.cause.message, 'Something broke.');
+});
