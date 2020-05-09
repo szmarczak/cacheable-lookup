@@ -1,4 +1,4 @@
-const {V4MAPPED, ADDRCONFIG} = require('dns');
+const {V4MAPPED, ADDRCONFIG, ALL} = require('dns');
 const {Resolver: AsyncResolver} = require('dns').promises;
 const {promisify} = require('util');
 const http = require('http');
@@ -300,6 +300,18 @@ test('V4MAPPED hint', async t => {
 	// V4MAPPED
 	const entries = await cacheable.lookupAsync('static4', {family: 6, hints: V4MAPPED});
 	verify(t, entries, {address: '::ffff:127.0.0.1', family: 6});
+});
+
+test('ALL hint', async t => {
+	const cacheable = new CacheableLookup({resolver});
+
+	// ALL
+	const entries = await cacheable.lookupAsync('localhost', {family: 6, hints: V4MAPPED | ALL, all: true});
+
+	verify(t, entries, [
+		{address: '::ffff:127.0.0.1', family: 6, ttl: 60},
+		{address: '::ffff:127.0.0.2', family: 6, ttl: 60}
+	]);
 });
 
 test('ADDRCONFIG hint', async t => {
