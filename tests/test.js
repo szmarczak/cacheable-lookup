@@ -233,7 +233,7 @@ const verify = (t, entry, value) => {
 };
 
 test('options.family', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	// IPv4
 	let entry = await cacheable.lookupAsync('localhost', {family: 4});
@@ -251,7 +251,7 @@ test('options.family', async t => {
 });
 
 test('options.all', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	const entries = await cacheable.lookupAsync('localhost', {all: true});
 	verify(t, entries, [
@@ -261,7 +261,7 @@ test('options.all', async t => {
 });
 
 test('options.all mixed with options.family', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	// IPv4
 	let entries = await cacheable.lookupAsync('localhost', {all: true, family: 4});
@@ -277,7 +277,7 @@ test('options.all mixed with options.family', async t => {
 });
 
 test('V4MAPPED hint', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	// Make sure default behavior is right
 	await t.throwsAsync(cacheable.lookupAsync('static4', {family: 6}), {code: 'ENOTFOUND'});
@@ -291,7 +291,7 @@ test('ADDRCONFIG hint', async t => {
 	//=> has6 = false, family = 6
 	{
 		const CacheableLookup = mockedInterfaces({has4: true, has6: false});
-		const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+		const cacheable = new CacheableLookup({resolver});
 
 		await t.throwsAsync(cacheable.lookupAsync('localhost', {family: 6, hints: ADDRCONFIG}), {code: 'ENOTFOUND'});
 	}
@@ -299,7 +299,7 @@ test('ADDRCONFIG hint', async t => {
 	//=> has6 = true, family = 6
 	{
 		const CacheableLookup = mockedInterfaces({has4: true, has6: true});
-		const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+		const cacheable = new CacheableLookup({resolver});
 
 		verify(t, await cacheable.lookupAsync('localhost', {family: 6, hints: ADDRCONFIG}), {
 			address: '::ffff:127.0.0.2',
@@ -310,7 +310,7 @@ test('ADDRCONFIG hint', async t => {
 	//=> has4 = false, family = 4
 	{
 		const CacheableLookup = mockedInterfaces({has4: false, has6: true});
-		const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+		const cacheable = new CacheableLookup({resolver});
 
 		await t.throwsAsync(cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {code: 'ENOTFOUND'});
 	}
@@ -318,7 +318,7 @@ test('ADDRCONFIG hint', async t => {
 	//=> has4 = true, family = 4
 	{
 		const CacheableLookup = mockedInterfaces({has4: true, has6: true});
-		const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+		const cacheable = new CacheableLookup({resolver});
 
 		verify(t, await cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {
 			address: '127.0.0.1',
@@ -329,7 +329,7 @@ test('ADDRCONFIG hint', async t => {
 	// Update interface info
 	{
 		const CacheableLookup = mockedInterfaces({has4: false, has6: true});
-		const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+		const cacheable = new CacheableLookup({resolver});
 
 		await t.throwsAsync(cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {code: 'ENOTFOUND'});
 
@@ -345,7 +345,7 @@ test('ADDRCONFIG hint', async t => {
 });
 
 test.serial('caching works', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	// Make sure default behavior is right
 	let entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
@@ -369,7 +369,7 @@ test.serial('caching works', async t => {
 });
 
 test('respects ttl', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	// Make sure default behavior is right
 	let entries = await cacheable.lookupAsync('ttl', {all: true, family: 4});
@@ -396,13 +396,13 @@ test('respects ttl', async t => {
 });
 
 test('throw when there are entries available but not for the requested family', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	await t.throwsAsync(cacheable.lookupAsync('static4', {family: 6}), {code: 'ENOTFOUND'});
 });
 
 test('custom servers', async t => {
-	const cacheable = new CacheableLookup({resolver: createResolver(), customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver: createResolver()});
 
 	// .servers (get)
 	t.deepEqual(cacheable.servers, ['127.0.0.1']);
@@ -420,7 +420,7 @@ test('custom servers', async t => {
 });
 
 test('callback style', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	// Custom promise for this particular test
 	const lookup = (...args) => new Promise((resolve, reject) => {
@@ -448,7 +448,7 @@ test('callback style', async t => {
 });
 
 test('works', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	verify(t, await cacheable.lookupAsync('localhost'), {
 		address: '127.0.0.1',
@@ -459,7 +459,7 @@ test('works', async t => {
 test('options.maxTtl', async t => {
 	//=> maxTtl = 1
 	{
-		const cacheable = new CacheableLookup({resolver, maxTtl: 1, customHostsPath: false});
+		const cacheable = new CacheableLookup({resolver, maxTtl: 1});
 
 		// Make sure default behavior is right
 		verify(t, await cacheable.lookupAsync('maxTtl'), {
@@ -486,7 +486,7 @@ test('options.maxTtl', async t => {
 
 	//=> maxTtl = 0
 	{
-		const cacheable = new CacheableLookup({resolver, maxTtl: 0, customHostsPath: false});
+		const cacheable = new CacheableLookup({resolver, maxTtl: 0});
 
 		// Make sure default behavior is right
 		verify(t, await cacheable.lookupAsync('maxTtl'), {
@@ -513,7 +513,7 @@ test('options.maxTtl', async t => {
 });
 
 test('entry with 0 ttl', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	// Make sure default behavior is right
 	verify(t, await cacheable.lookupAsync('zeroTtl'), {
@@ -532,7 +532,7 @@ test('entry with 0 ttl', async t => {
 });
 
 test('http example', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	const options = {
 		hostname: 'example',
@@ -546,7 +546,7 @@ test('http example', async t => {
 });
 
 test('.lookup() and .lookupAsync() are automatically bounded', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	await t.notThrowsAsync(cacheable.lookupAsync('localhost'));
 	await t.notThrowsAsync(promisify(cacheable.lookup)('localhost'));
@@ -557,7 +557,7 @@ test('.lookup() and .lookupAsync() are automatically bounded', async t => {
 });
 
 test('works (Internet connection)', async t => {
-	const cacheable = new CacheableLookup({customHostsPath: false});
+	const cacheable = new CacheableLookup();
 
 	const {address, family} = await cacheable.lookupAsync('1dot1dot1dot1.cloudflare-dns.com');
 	t.true(address === '1.1.1.1' || address === '1.0.0.1');
@@ -565,7 +565,7 @@ test('works (Internet connection)', async t => {
 });
 
 test.serial('install & uninstall', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 	cacheable.install(http.globalAgent);
 
 	const options = {
@@ -587,7 +587,7 @@ test.serial('install & uninstall', async t => {
 });
 
 test('`.install()` throws if no Agent provided', t => {
-	const cacheable = new CacheableLookup({customHostsPath: false});
+	const cacheable = new CacheableLookup();
 
 	t.throws(() => cacheable.install(), {
 		message: 'Expected an Agent instance as the first argument'
@@ -599,7 +599,7 @@ test('`.install()` throws if no Agent provided', t => {
 });
 
 test('`.uninstall()` throws if no Agent provided', t => {
-	const cacheable = new CacheableLookup({customHostsPath: false});
+	const cacheable = new CacheableLookup();
 
 	t.throws(() => cacheable.uninstall(), {
 		message: 'Expected an Agent instance as the first argument'
@@ -611,7 +611,7 @@ test('`.uninstall()` throws if no Agent provided', t => {
 });
 
 test.serial('`.uninstall()` does not alter unmodified Agents', t => {
-	const cacheable = new CacheableLookup({customHostsPath: false});
+	const cacheable = new CacheableLookup();
 	const {createConnection} = http.globalAgent;
 
 	cacheable.uninstall(http.globalAgent);
@@ -620,7 +620,7 @@ test.serial('`.uninstall()` does not alter unmodified Agents', t => {
 });
 
 test.serial('throws if double-installing CacheableLookup', t => {
-	const cacheable = new CacheableLookup({customHostsPath: false});
+	const cacheable = new CacheableLookup();
 
 	cacheable.install(http.globalAgent);
 	t.throws(() => cacheable.install(http.globalAgent), {
@@ -650,8 +650,8 @@ test.serial('install - providing custom lookup function anyway', async t => {
 });
 
 test.serial('throws when calling `.uninstall()` on the wrong instance', t => {
-	const a = new CacheableLookup({customHostsPath: false});
-	const b = new CacheableLookup({resolver, customHostsPath: false});
+	const a = new CacheableLookup();
+	const b = new CacheableLookup({resolver});
 
 	a.install(http.globalAgent);
 
@@ -663,7 +663,7 @@ test.serial('throws when calling `.uninstall()` on the wrong instance', t => {
 });
 
 test('async resolver (Internet connection)', async t => {
-	const cacheable = new CacheableLookup({resolver: new AsyncResolver(), customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver: new AsyncResolver()});
 
 	t.is(typeof cacheable._resolve4, 'function');
 	t.is(typeof cacheable._resolve6, 'function');
@@ -673,7 +673,7 @@ test('async resolver (Internet connection)', async t => {
 });
 
 test('clear() works', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	await cacheable.lookupAsync('localhost');
 	t.is(cacheable._cache.size, 1);
@@ -684,7 +684,7 @@ test('clear() works', async t => {
 });
 
 test('ttl works', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	await Promise.all([cacheable.lookupAsync('temporary'), cacheable.lookupAsync('ttl')]);
 	t.is(cacheable._cache.size, 2);
@@ -694,101 +694,10 @@ test('ttl works', async t => {
 	t.is(cacheable._cache.size, 0);
 });
 
-for (const file of hostsFiles) {
-	test(`respects the \`hosts\` file - ${file}`, async t => {
-		const cacheable = new CacheableLookup({
-			customHostsPath: path.resolve(__dirname, file)
-		});
-
-		const getAddress = async hostname => {
-			const result = await cacheable.lookupAsync(hostname);
-
-			t.is(result.family, 4);
-			t.is(result.ttl, Infinity);
-			t.is(result.expires, Infinity);
-			return result.address;
-		};
-
-		t.is(await getAddress('helloworld'), '127.0.0.1');
-		t.is(await getAddress('foobar'), '127.0.0.1');
-		await t.throwsAsync(getAddress('woofwoof'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('noiphere'), {code: 'ENOTFOUND'});
-		t.is(await getAddress('foo1'), '127.0.0.1');
-		t.is(await getAddress('foo2'), '127.0.0.1');
-		t.is(await getAddress('manywhitespaces'), '127.0.0.1');
-		t.is(await getAddress('startswithwhitespace'), '127.0.0.1');
-		t.is(await getAddress('tab'), '127.0.0.1');
-		t.is(await getAddress('doublenewline'), '127.0.0.1');
-
-		{
-			const entry = await cacheable.lookupAsync('foo3', {family: 4});
-			t.is(entry.address, '127.0.0.1');
-			t.is(entry.family, 4);
-			t.is(entry.expires, Infinity);
-			t.is(entry.ttl, Infinity);
-		}
-
-		{
-			const entry = await cacheable.lookupAsync('foo3', {family: 6});
-			t.is(entry.address, '::1');
-			t.is(entry.family, 6);
-			t.is(entry.expires, Infinity);
-			t.is(entry.ttl, Infinity);
-		}
-
-		{
-			const entries = await cacheable.lookupAsync('foo4', {all: true});
-			t.deepEqual(entries, [
-				{
-					address: '127.0.0.1',
-					family: 4,
-					expires: Infinity,
-					ttl: Infinity
-				}
-			]);
-		}
-	});
-
-	test(`the \`hosts\` file support can be turned off - ${file}`, async t => {
-		const cacheable = new CacheableLookup({
-			customHostsPath: false,
-			resolver
-		});
-
-		const getAddress = async hostname => {
-			const result = await cacheable.lookupAsync(hostname);
-
-			t.is(result.family, 4);
-			t.is(result.ttl, Infinity);
-			t.is(result.expires, Infinity);
-
-			return result.address;
-		};
-
-		await t.throwsAsync(getAddress('helloworld'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('foobar'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('woofwoof'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('noiphere'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('foo1'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('foo2'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('manywhitespaces'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('startswithwhitespace'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('tab'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('doublenewline'), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('foo3', {family: 4}), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('foo3', {family: 6}), {code: 'ENOTFOUND'});
-		await t.throwsAsync(getAddress('foo4', {all: true}), {code: 'ENOTFOUND'});
-
-		const {address} = await cacheable.lookupAsync('localhost');
-		t.is(address, '127.0.0.1');
-	});
-}
-
 test('custom cache support', async t => {
 	const cache = new Keyv();
 
 	const cacheable = new CacheableLookup({
-		customHostsPath: false,
 		resolver,
 		cache
 	});
@@ -810,45 +719,8 @@ test('custom cache support', async t => {
 	t.is(newEntry, undefined);
 });
 
-test('travis hosts', async t => {
-	const resolver = createResolver();
-	resolver.data = {};
-
-	const cacheable = new CacheableLookup({
-		customHostsPath: path.resolve(__dirname, 'travisHosts.txt'),
-		resolver
-	});
-
-	const entry = await cacheable.lookupAsync('localhost');
-
-	t.deepEqual(entry, {
-		address: '127.0.0.1',
-		expires: Infinity,
-		family: 4,
-		ttl: Infinity
-	});
-});
-
-test('lookup throws if failed to retrieve the `hosts` file', async t => {
-	const resolver = createResolver();
-	resolver.data = {};
-
-	const cacheable = new CacheableLookup({
-		customHostsPath: path.resolve(__dirname, 'doesNotExist.txt'),
-		resolver
-	});
-
-	await t.throwsAsync(
-		cacheable.lookupAsync('localhost'),
-		{
-			code: 'ENOENT',
-			message: /^ENOENT: no such file or directory/
-		}
-	);
-});
-
 test('fallback works', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false, fallbackTtl: 1});
+	const cacheable = new CacheableLookup({resolver, fallbackTtl: 1});
 
 	const entries = await cacheable.lookupAsync('osHostname', {all: true});
 	t.is(entries.length, 2);
@@ -869,7 +741,7 @@ test('fallback works', async t => {
 });
 
 test('errors are cached', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false, errorTtl: 0.1});
+	const cacheable = new CacheableLookup({resolver, errorTtl: 0.1});
 
 	await t.throwsAsync(cacheable.lookupAsync('doesNotExist'), {
 		code: 'ENOTFOUND'
@@ -885,7 +757,7 @@ test('errors are cached', async t => {
 });
 
 test('passing family as options', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	const promisified = promisify(cacheable.lookup);
 
@@ -898,7 +770,7 @@ test('passing family as options', async t => {
 });
 
 test('clear(hostname) works', async t => {
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	await cacheable.lookupAsync('localhost');
 	await cacheable.lookupAsync('temporary');
@@ -910,60 +782,19 @@ test('clear(hostname) works', async t => {
 
 test('prevents overloading DNS', async t => {
 	const resolver = createResolver();
-	const {lookupAsync} = new CacheableLookup({resolver, customHostsPath: false});
+	const {lookupAsync} = new CacheableLookup({resolver});
 
 	await Promise.all([lookupAsync('localhost'), lookupAsync('localhost')]);
 
 	t.is(resolver.totalQueries, 2);
 });
 
-test('one HostsResolver per hosts file', t => {
-	const customHostsPath = path.resolve(__dirname, 'hosts.txt');
-	const resolver = createResolver();
-
-	const first = new CacheableLookup({customHostsPath, resolver});
-	const second = new CacheableLookup({customHostsPath, resolver});
-
-	t.is(first._hostsResolver, second._hostsResolver);
-});
-
 test('returns IPv6 if no other entries available', async t => {
 	const CacheableLookup = mockedInterfaces({has4: false, has6: true});
-	const cacheable = new CacheableLookup({resolver, customHostsPath: false});
+	const cacheable = new CacheableLookup({resolver});
 
 	verify(t, await cacheable.lookupAsync('localhost', {hints: ADDRCONFIG}), {
 		address: '::ffff:127.0.0.2',
 		family: 6
 	});
-});
-
-test('hosts file watcher works', async t => {
-	const customHostsPath = path.resolve(__dirname, 'watching.txt');
-
-	await fs.writeFile(customHostsPath, '127.0.0.1 demo');
-
-	const cacheable = new CacheableLookup({
-		resolver,
-		customHostsPath,
-		watchingHostsFile: true
-	});
-
-	const first = await cacheable.lookupAsync('demo', {all: true});
-
-	await fs.writeFile(customHostsPath, '');
-
-	await new Promise(resolve => setTimeout(resolve, 100));
-
-	await t.throwsAsync(cacheable.lookupAsync('demo', {all: true}), {
-		code: 'ENOTFOUND'
-	});
-
-	t.deepEqual(first, [
-		{
-			address: '127.0.0.1',
-			family: 4,
-			ttl: Infinity,
-			expires: Infinity
-		}
-	]);
 });
