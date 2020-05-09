@@ -67,7 +67,11 @@ const mockedInterfaces = options => {
 };
 
 const createResolver = () => {
-	let totalQueries = 0;
+	let counter = {
+		4: 0,
+		6: 0,
+		lookup: 0
+	};
 
 	const resolver = {
 		servers: ['127.0.0.1'],
@@ -78,13 +82,6 @@ const createResolver = () => {
 			resolver.servers = [...servers];
 		},
 		resolve: (hostname, options, callback) => {
-			totalQueries++;
-
-			if (hostname === 'undefined') {
-				callback(new Error('no entry'));
-				return;
-			}
-
 			let data;
 			for (const server of resolver.servers) {
 				if (resolver.data[server][hostname]) {
@@ -94,7 +91,18 @@ const createResolver = () => {
 			}
 
 			if (!data) {
-				callback(null, undefined);
+				const error = new Error(`ENOTFOUND ${hostname}`);
+				error.code = 'ENOTFOUND';
+
+				callback(error);
+				return;
+			}
+
+			if (data.length === 0) {
+				const error = new Error(`ENODATA ${hostname}`);
+				error.code = 'ENODATA';
+
+				callback(error);
 				return;
 			}
 
@@ -105,15 +113,19 @@ const createResolver = () => {
 			callback(null, JSON.parse(JSON.stringify(data)));
 		},
 		resolve4: (hostname, options, callback) => {
+			counter[4]++;
+
 			return resolver.resolve(hostname, {...options, family: 4}, callback);
 		},
 		resolve6: (hostname, options, callback) => {
+			counter[6]++;
+
 			return resolver.resolve(hostname, {...options, family: 6}, callback);
 		},
 		lookup: (hostname, options, callback) => {
-			// We don't need to implement hints here
+			// No need to implement hints yet
 
-			totalQueries++;
+			counter.lookup++;
 
 			if (!resolver.lookupData[hostname]) {
 				const error = new Error(`ENOTFOUND ${hostname}`);
@@ -181,8 +193,15 @@ const createResolver = () => {
 				{address: '127.0.0.2', family: 4}
 			]
 		},
-		get totalQueries() {
-			return totalQueries;
+		get counter() {
+			return counter;
+		},
+		resetCounter() {
+			counter = {
+				4: 0,
+				6: 0,
+				lookup: 0
+			};
 		}
 	};
 
@@ -715,8 +734,9 @@ test('custom cache support', async t => {
 	t.is(newEntry, undefined);
 });
 
-test('fallback works', async t => {
-	const cacheable = new CacheableLookup({resolver, fallbackTtl: 1});
+test.serial('fallback works', async t => {
+	const cacheable = new CacheableLookup({resolver, fallbackDuration: 3600});
+	resolver.resetCounter();
 
 	const entries = await cacheable.lookupAsync('osHostname', {all: true});
 	t.is(entries.length, 2);
@@ -727,13 +747,15 @@ test('fallback works', async t => {
 	t.is(entries[1].address, '127.0.0.2');
 	t.is(entries[1].family, 4);
 
-	t.is(cacheable._cache.size, 1);
-
-	await sleep((entries[0].ttl * 1000) + 1);
-
-	cacheable.tick();
-
 	t.is(cacheable._cache.size, 0);
+
+	await cacheable.lookupAsync('osHostname', {all: true});
+
+	t.deepEqual(resolver.counter, {
+		6: 1,
+		4: 1,
+		lookup: 2
+	});
 });
 
 test('errors are cached', async t => {
@@ -778,11 +800,18 @@ test('clear(hostname) works', async t => {
 
 test('prevents overloading DNS', async t => {
 	const resolver = createResolver();
-	const {lookupAsync} = new CacheableLookup({resolver});
+	const {lookupAsync} = new CacheableLookup({
+		resolver,
+		lookup: resolver.lookup
+	});
 
 	await Promise.all([lookupAsync('localhost'), lookupAsync('localhost')]);
 
-	t.is(resolver.totalQueries, 2);
+	t.deepEqual(resolver.counter, {
+		4: 1,
+		6: 1,
+		lookup: 1
+	});
 });
 
 test('returns IPv6 if no other entries available', async t => {

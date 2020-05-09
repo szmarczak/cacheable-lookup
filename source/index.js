@@ -11,8 +11,6 @@ const {
 const {promisify} = require('util');
 const os = require('os');
 
-const lookup = promisify(dnsLookup);
-
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
 
@@ -66,6 +64,7 @@ class CacheableLookup {
 		cache = new Map(),
 		maxTtl = Infinity,
 		resolver = new AsyncResolver(),
+		lookup = dnsLookup,
 		fallbackDuration = 3600,
 		errorTtl = 0.15
 	} = {}) {
@@ -74,6 +73,7 @@ class CacheableLookup {
 
 		this._cache = cache;
 		this._resolver = resolver;
+		this._dnsLookup = promisify(lookup);
 
 		if (this._resolver instanceof AsyncResolver) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
@@ -86,9 +86,7 @@ class CacheableLookup {
 		this._iface = getIfaceInfo();
 
 		this._pending = {};
-
 		this._nextRemovalTime = false;
-
 		this._hostnamesToFallback = new Set();
 
 		if (fallbackDuration < 1) {
@@ -251,8 +249,8 @@ class CacheableLookup {
 			aaaaTtl = Math.max(aaaaTtl, entry.ttl);
 		}
 
-		if (A.length) {
-			if (AAAA.length) {
+		if (A.length > 0) {
+			if (AAAA.length > 0) {
 				cacheTtl = Math.min(aTtl, aaaaTtl);
 			} else {
 				cacheTtl = aTtl;
@@ -283,7 +281,7 @@ class CacheableLookup {
 		}
 
 		try {
-			const entries = await lookup(hostname, {
+			const entries = await this._dnsLookup(hostname, {
 				all: true
 			});
 
@@ -318,7 +316,7 @@ class CacheableLookup {
 
 	async queryAndCache(hostname) {
 		if (this._hostnamesToFallback.has(hostname)) {
-			return lookup(hostname, all);
+			return this._dnsLookup(hostname, all);
 		}
 
 		const resolverPromise = this._resolve(hostname);
