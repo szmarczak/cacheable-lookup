@@ -70,10 +70,10 @@ class CacheableLookup {
 	constructor({
 		cache = new Map(),
 		maxTtl = Infinity,
-		resolver = new AsyncResolver(),
-		lookup = dnsLookup,
 		fallbackDuration = 3600,
-		errorTtl = 0.15
+		errorTtl = 0.15,
+		resolver = new AsyncResolver(),
+		lookup = dnsLookup
 	} = {}) {
 		this.maxTtl = maxTtl;
 		this.errorTtl = errorTtl;
@@ -116,7 +116,7 @@ class CacheableLookup {
 	}
 
 	set servers(servers) {
-		this.updateInterfaceInfo();
+		this.clear();
 
 		this._resolver.setServers(servers);
 	}
@@ -438,8 +438,13 @@ class CacheableLookup {
 	}
 
 	updateInterfaceInfo() {
+		const {_iface} = this;
+
 		this._iface = getIfaceInfo();
-		this._cache.clear();
+
+		if ((_iface.has4 && !this._iface.has4) || (_iface.has6 && !this._iface.has6)) {
+			this._cache.clear();
+		}
 	}
 
 	clear(hostname) {
