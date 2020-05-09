@@ -1,14 +1,10 @@
 const {V4MAPPED, ADDRCONFIG} = require('dns');
 const {Resolver: AsyncResolver} = require('dns').promises;
-const fs = require('fs').promises;
 const {promisify} = require('util');
 const http = require('http');
-const path = require('path');
 const test = require('ava');
 const Keyv = require('keyv');
 const proxyquire = require('proxyquire');
-
-const hostsFiles = ['hosts.txt', 'crlfHosts.txt'];
 
 const makeRequest = options => new Promise((resolve, reject) => {
 	http.get(options, resolve).once('error', reject);

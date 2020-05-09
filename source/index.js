@@ -157,14 +157,10 @@ class CacheableLookup {
 			const filtered = cached.filter(entry => entry.family === 6);
 
 			if (options.hints & V4MAPPED) {
-				if (options.hints & ALL) {
+				if (options.hints & ALL || filtered.length === 0) {
 					map4to6(cached);
 				} else {
-					if (filtered.length === 0) {
-						map4to6(cached);
-					} else {
-						cached = filtered;
-					}
+					cached = filtered;
 				}
 			} else {
 				cached = filtered;
@@ -285,7 +281,7 @@ class CacheableLookup {
 				cacheTtl: 0,
 				isLookup: true
 			};
-		} catch (error) {
+		} catch (_) {
 			return empty;
 		}
 	}

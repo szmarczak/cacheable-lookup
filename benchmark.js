@@ -56,6 +56,7 @@ suite.add('CacheableLookup#lookupAsync', deferred => {
 	suite.run();
 })();
 
+// ---------------------------------------------------------------------------------------
 // example.com
 // CacheableLookup#lookupAsync                x 2,896,251 ops/sec ±1.07% (85 runs sampled)
 // CacheableLookup#lookupAsync.all            x 2,842,664 ops/sec ±1.11% (88 runs sampled)
