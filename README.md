@@ -60,7 +60,7 @@ Custom cache instance. If `undefined`, it will create a new one.
 
 **Note**: If you decide to use Keyv instead of the native implementation, the performance will drop by 10x. Memory leaks may occur as it doesn't provide any way to remove all the deprecated values at once.
 
-**Tip**: Because [`QuickLRU`](https://github.com/sindresorhus/quick-lru) is fully compatible with the Map API, you can use it to limit the amount of cached entries. Example:
+**Tip**: [`QuickLRU`](https://github.com/sindresorhus/quick-lru) is fully compatible with the Map API, you can use it to limit the amount of cached entries. Example:
 
 ```js
 const http = require('http');
