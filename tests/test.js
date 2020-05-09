@@ -5,6 +5,7 @@ const http = require('http');
 const test = require('ava');
 const Keyv = require('keyv');
 const proxyquire = require('proxyquire');
+const QuickLRU = require('quick-lru');
 
 const makeRequest = options => new Promise((resolve, reject) => {
 	http.get(options, resolve).once('error', reject);
@@ -861,4 +862,46 @@ test('throws when no internet connection', async t => {
 	await t.throwsAsync(cacheable.lookupAsync('econnrefused'), {
 		code: 'ECONNREFUSED'
 	});
+});
+
+test('full-featured custom cache', async t => {
+	const cache = new QuickLRU({maxSize: 1});
+
+	const cacheable = new CacheableLookup({
+		resolver,
+		cache
+	});
+
+	{
+		const entry = await cacheable.lookupAsync('localhost');
+
+		verify(t, entry, {
+			address: '127.0.0.1',
+			family: 4
+		});
+	}
+
+	t.is(cache.size, 1);
+
+	{
+		const entry = await cacheable.lookupAsync('localhost');
+
+		verify(t, entry, {
+			address: '127.0.0.1',
+			family: 4
+		});
+	}
+
+	t.is(cache.size, 1);
+
+	{
+		const entry = await cacheable.lookupAsync('temporary');
+
+		verify(t, entry, {
+			address: '127.0.0.1',
+			family: 4
+		});
+	}
+
+	t.is(cache.size, 1);
 });
