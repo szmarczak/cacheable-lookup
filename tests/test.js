@@ -90,6 +90,14 @@ const createResolver = () => {
 				}
 			}
 
+			if (hostname === 'econnrefused') {
+				const error = new Error(`ECONNREFUSED ${hostname}`);
+				error.code = 'ECONNREFUSED';
+
+				callback(error);
+				return;
+			}
+
 			if (!data) {
 				const error = new Error(`ENOTFOUND ${hostname}`);
 				error.code = 'ENOTFOUND';
@@ -844,5 +852,13 @@ test('returns IPv6 if no other entries available', async t => {
 	verify(t, await cacheable.lookupAsync('localhost', {hints: ADDRCONFIG}), {
 		address: '::ffff:127.0.0.2',
 		family: 6
+	});
+});
+
+test('throws when no internet connection', async t => {
+	const cacheable = new CacheableLookup({resolver});
+
+	await t.throwsAsync(cacheable.lookupAsync('econnrefused'), {
+		code: 'ECONNREFUSED'
 	});
 });
