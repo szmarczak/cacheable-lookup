@@ -231,8 +231,9 @@ class CacheableLookup {
 			this._resolve6(hostname, ttl)
 		].map(promise => wrap(promise)));
 
-		let aTTL = 0;
-		let aaaaTTL = 0;
+		let aTtl = 0;
+		let aaaaTtl = 0;
+		let cacheTtl = 0;
 
 		const now = Date.now();
 
@@ -240,14 +241,24 @@ class CacheableLookup {
 			entry.family = 4;
 			entry.expires = now + (entry.ttl * 1000);
 
-			aTTL = Math.max(aTTL, entry.ttl);
+			aTtl = Math.max(aTtl, entry.ttl);
 		}
 
 		for (const entry of AAAA) {
 			entry.family = 6;
 			entry.expires = now + (entry.ttl * 1000);
 
-			aaaaTTL = Math.max(aaaaTTL, entry.ttl);
+			aaaaTtl = Math.max(aaaaTtl, entry.ttl);
+		}
+
+		if (A.length) {
+			if (AAAA.length) {
+				cacheTtl = Math.min(aTtl, aaaaTtl);
+			} else {
+				cacheTtl = aTtl;
+			}
+		} else {
+			cacheTtl = aaaaTtl;
 		}
 
 		return {
@@ -255,7 +266,7 @@ class CacheableLookup {
 				...A,
 				...AAAA
 			],
-			cacheTtl: Math.min(aTTL, aaaaTTL),
+			cacheTtl,
 			isLookup: false
 		};
 	}
