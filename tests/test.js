@@ -768,6 +768,14 @@ test.serial('fallback works', async t => {
 	});
 });
 
+test('fallback can be turned off', async t => {
+	const cacheable = new CacheableLookup({resolver, fallbackDuration: 0});
+
+	await t.throwsAsync(cacheable.lookupAsync('osHostname', {all: true}), {
+		message: 'cacheableLookup ENOTFOUND osHostname'
+	});
+});
+
 test('errors are cached', async t => {
 	const cacheable = new CacheableLookup({resolver, errorTtl: 0.1});
 
