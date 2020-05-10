@@ -958,3 +958,26 @@ test('throws when the cache instance is broken', async t => {
 
 	t.is(error.cause.message, 'Something broke.');
 });
+
+test('slow dns.lookup', async t => {
+	const cacheable = new CacheableLookup({
+		resolver,
+		lookup: (hostname, options, callback) => {
+			t.is(hostname, 'osHostname');
+			t.deepEqual(options, {all: true});
+
+			setTimeout(() => {
+				callback(null, [
+					{address: '127.0.0.1', family: 4}
+				]);
+			}, 10);
+		}
+	});
+
+	const entry = await cacheable.lookupAsync('osHostname');
+
+	t.deepEqual(entry, {
+		address: '127.0.0.1',
+		family: 4
+	});
+});

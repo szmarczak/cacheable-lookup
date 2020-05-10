@@ -332,13 +332,25 @@ class CacheableLookup {
 		const resolverPromise = this._resolve(hostname);
 		const lookupPromise = this._lookup(hostname);
 
-		let query = await Promise.race([
-			resolverPromise,
-			lookupPromise
-		]);
+		let query;
 
-		if (query.isLookup && query.entries.length === 0) {
-			query = await resolverPromise;
+		try {
+			query = await Promise.race([
+				resolverPromise,
+				lookupPromise
+			]);
+
+			if (query.entries.length === 0) {
+				if (query.isLookup) {
+					query = await resolverPromise;
+				} else {
+					query = await lookupPromise;
+				}
+			}
+		} catch (error) {
+			delete this._pending[hostname];
+
+			throw error;
 		}
 
 		(async () => {
