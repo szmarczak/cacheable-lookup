@@ -1,6 +1,6 @@
-### Please do not user this in production yet.
+### :warning: Please do not user this in production yet.
 
-### There is a [memory leak](https://github.com/szmarczak/cacheable-lookup/issues/32) that causes the Node.js process to crash.
+### :warning: There is a [memory leak](https://github.com/szmarczak/cacheable-lookup/issues/32) that causes the Node.js process to crash.
 
 # cacheable-lookup
 
