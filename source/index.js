@@ -271,22 +271,11 @@ class CacheableLookup {
 				...A,
 				...AAAA
 			],
-			cacheTtl,
-			isLookup: false
+			cacheTtl
 		};
 	}
 
 	async _lookup(hostname) {
-		const empty = {
-			entries: [],
-			cacheTtl: 0,
-			isLookup: true
-		};
-
-		if (!this._fallback) {
-			return empty;
-		}
-
 		try {
 			const entries = await this._dnsLookup(hostname, {
 				all: true
@@ -294,11 +283,13 @@ class CacheableLookup {
 
 			return {
 				entries,
-				cacheTtl: 0,
-				isLookup: true
+				cacheTtl: 0
 			};
 		} catch (_) {
-			return empty;
+			return {
+				entries: [],
+				cacheTtl: 0
+			};
 		}
 	}
 
@@ -332,7 +323,7 @@ class CacheableLookup {
 		try {
 			let query = await this._resolve(hostname);
 
-			if (query.entries.length === 0) {
+			if (query.entries.length === 0 && this._fallback) {
 				query = await this._lookup(hostname);
 
 				if (query.entries.length !== 0) {
