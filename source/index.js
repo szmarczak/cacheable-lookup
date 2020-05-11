@@ -353,7 +353,6 @@ class CacheableLookup {
 			throw error;
 		}
 
-		/*
 		(async () => {
 			if (query.isLookup) {
 				try {
@@ -375,9 +374,6 @@ class CacheableLookup {
 
 			delete this._pending[hostname];
 		})();
-		*/
-
-		delete this._pending[hostname];
 
 		return query.entries;
 	}
