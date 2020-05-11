@@ -83,8 +83,8 @@ class CacheableLookup {
 		this._dnsLookup = promisify(lookup);
 
 		if (this._resolver instanceof AsyncResolver) {
-			// this._resolve4 = this._resolver.resolve4.bind(this._resolver);
-			// this._resolve6 = this._resolver.resolve6.bind(this._resolver);
+			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
+			this._resolve6 = this._resolver.resolve6.bind(this._resolver);
 		} else {
 			this._resolve4 = promisify(this._resolver.resolve4.bind(this._resolver));
 			this._resolve6 = promisify(this._resolver.resolve6.bind(this._resolver));
@@ -111,8 +111,8 @@ class CacheableLookup {
 			}
 		}
 
-		// this.lookup = this.lookup.bind(this);
-		// this.lookupAsync = this.lookupAsync.bind(this);
+		this.lookup = this.lookup.bind(this);
+		this.lookupAsync = this.lookupAsync.bind(this);
 	}
 
 	set servers(servers) {
@@ -232,8 +232,8 @@ class CacheableLookup {
 
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
 		const [A, AAAA] = await Promise.all([
-			this._resolver.resolve4(hostname, ttl),
-			this._resolver.resolve6(hostname, ttl)
+			this._resolve4(hostname, ttl),
+			this._resolve6(hostname, ttl)
 		].map(promise => wrap(promise)));
 
 		let aTtl = 0;
