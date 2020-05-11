@@ -1,7 +1,3 @@
-### :warning: Please do not user this in production yet.
-
-### :warning: There is a [memory leak](https://github.com/szmarczak/cacheable-lookup/issues/32) that causes the Node.js process to crash.
-
 # cacheable-lookup
 
 > A cacheable [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback) that respects TTL :tada:
