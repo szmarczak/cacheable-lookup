@@ -792,7 +792,7 @@ test.serial('fallback works', async t => {
 	});
 });
 
-test('fallback works #2', async t => {
+test('real DNS queries first', async t => {
 	const resolver = createResolver({delay: 0});
 	const cacheable = new CacheableLookup({
 		resolver,
@@ -802,8 +802,8 @@ test('fallback works #2', async t => {
 
 	{
 		const entries = await cacheable.lookupAsync('outdated', {all: true});
-		t.deepEqual(entries, [
-			{address: '127.0.0.127', family: 4}
+		verify(t, entries, [
+			{address: '127.0.0.1', family: 4}
 		]);
 	}
 
@@ -875,7 +875,7 @@ test('prevents overloading DNS', async t => {
 	t.deepEqual(resolver.counter, {
 		4: 1,
 		6: 1,
-		lookup: 1
+		lookup: 0
 	});
 });
 

@@ -329,53 +329,29 @@ class CacheableLookup {
 			return this._dnsLookup(hostname, all);
 		}
 
-		const resolverPromise = this._resolve(hostname);
-		const lookupPromise = this._lookup(hostname);
-
-		let query;
-
 		try {
-			query = await Promise.race([
-				resolverPromise,
-				lookupPromise
-			]);
+			let query = await this._resolve(hostname);
 
 			if (query.entries.length === 0) {
-				if (query.isLookup) {
-					query = await resolverPromise;
-				} else {
-					query = await lookupPromise;
+				query = await this._lookup(hostname);
+
+				if (query.entries.length !== 0) {
+					// Use `dns.lookup(...)` for that particular hostname
+					this._hostnamesToFallback.add(hostname);
 				}
 			}
+
+			const cacheTtl = query.entries.length === 0 ? this.errorTtl : query.cacheTtl;
+			await this._set(hostname, query.entries, cacheTtl);
+
+			delete this._pending[hostname];
+
+			return query.entries;
 		} catch (error) {
 			delete this._pending[hostname];
 
 			throw error;
 		}
-
-		(async () => {
-			if (query.isLookup) {
-				try {
-					const realDnsQuery = await resolverPromise;
-
-					// If no DNS entries found
-					if (realDnsQuery.entries.length === 0) {
-						// Use `dns.lookup(...)` for that particular hostname
-						this._hostnamesToFallback.add(hostname);
-					} else {
-						await this._set(hostname, realDnsQuery.entries, realDnsQuery.cacheTtl);
-					}
-				} catch (_) {}
-			} else {
-				const cacheTtl = query.entries.length === 0 ? this.errorTtl : query.cacheTtl;
-
-				await this._set(hostname, query.entries, cacheTtl);
-			}
-
-			delete this._pending[hostname];
-		})();
-
-		return query.entries;
 	}
 
 	_tick(ms) {
