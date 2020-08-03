@@ -3,7 +3,7 @@
   "version": "5.0.3",
   "description": "A cacheable dns.lookup(…) that respects the TTL",
   "engines": {
-    "node": ">=10"
+    "node": ">=10.6.0"
   },
   "files": [
     "source",
