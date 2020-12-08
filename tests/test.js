@@ -792,8 +792,6 @@ test.serial('fallback works', async t => {
 	});
 });
 
-
-
 test('fallback works if ip change', async t => {
 	const cacheable = new CacheableLookup({resolver, fallbackDuration: 3600});
 	resolver.resetCounter();
