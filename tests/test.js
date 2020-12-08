@@ -792,6 +792,55 @@ test.serial('fallback works', async t => {
 	});
 });
 
+
+
+test('fallback works if ip change', async t => {
+	const cacheable = new CacheableLookup({resolver, fallbackDuration: 3600});
+	resolver.resetCounter();
+	resolver.lookupData.osHostnameChange = [
+		{address: '127.0.0.1', family: 4},
+		{address: '127.0.0.2', family: 4}
+	];
+
+	// First call: do not enter in `if (this._hostnamesToFallback.has(hostname)) {`
+	const entries = await cacheable.query('osHostnameChange', {all: true});
+	t.is(entries.length, 2);
+
+	t.is(entries[0].address, '127.0.0.1');
+	t.is(entries[0].family, 4);
+
+	t.is(entries[1].address, '127.0.0.2');
+	t.is(entries[1].family, 4);
+
+	t.is(cacheable._cache.size, 0);
+
+	// Second call: enter in `if (this._hostnamesToFallback.has(hostname)) {`
+	// And use _dnsLookup
+	// This call is used to ensure that this._pending is cleaned up when the promise is resolved
+	await cacheable.query('osHostnameChange', {all: true});
+
+	// Third call: enter in `if (this._hostnamesToFallback.has(hostname)) {`
+	// And use _dnsLookup
+	// Address should be different
+	resolver.lookupData.osHostnameChange = [
+		{address: '127.0.0.3', family: 4},
+		{address: '127.0.0.4', family: 4}
+	];
+	const entries2 = await cacheable.query('osHostnameChange', {all: true});
+
+	t.is(entries2.length, 2);
+
+	t.is(entries2[0].address, '127.0.0.3');
+	t.is(entries2[0].family, 4);
+
+	t.is(entries2[1].address, '127.0.0.4');
+	t.is(entries2[1].family, 4);
+
+	t.is(cacheable._cache.size, 0);
+
+	delete resolver.lookupData.osHostnameChange;
+});
+
 test('real DNS queries first', async t => {
 	const resolver = createResolver({delay: 0});
 	const cacheable = new CacheableLookup({

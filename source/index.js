@@ -317,7 +317,9 @@ class CacheableLookup {
 
 	async queryAndCache(hostname) {
 		if (this._hostnamesToFallback.has(hostname)) {
-			return this._dnsLookup(hostname, all);
+			const entries = await this._dnsLookup(hostname, all);
+			delete this._pending[hostname];
+			return entries;
 		}
 
 		try {
