@@ -206,7 +206,11 @@ class CacheableLookup {
 				const newPromise = this.queryAndCache(hostname);
 				this._pending[hostname] = newPromise;
 
-				cached = await newPromise;
+				try {
+					cached = await newPromise;
+				} finally {
+					delete this._pending[hostname];
+				}
 			}
 		}
 
@@ -320,29 +324,21 @@ class CacheableLookup {
 			return this._dnsLookup(hostname, all);
 		}
 
-		try {
-			let query = await this._resolve(hostname);
+		let query = await this._resolve(hostname);
 
-			if (query.entries.length === 0 && this._fallback) {
-				query = await this._lookup(hostname);
+		if (query.entries.length === 0 && this._fallback) {
+			query = await this._lookup(hostname);
 
-				if (query.entries.length !== 0) {
-					// Use `dns.lookup(...)` for that particular hostname
-					this._hostnamesToFallback.add(hostname);
-				}
+			if (query.entries.length !== 0) {
+				// Use `dns.lookup(...)` for that particular hostname
+				this._hostnamesToFallback.add(hostname);
 			}
-
-			const cacheTtl = query.entries.length === 0 ? this.errorTtl : query.cacheTtl;
-			await this._set(hostname, query.entries, cacheTtl);
-
-			delete this._pending[hostname];
-
-			return query.entries;
-		} catch (error) {
-			delete this._pending[hostname];
-
-			throw error;
 		}
+
+		const cacheTtl = query.entries.length === 0 ? this.errorTtl : query.cacheTtl;
+		await this._set(hostname, query.entries, cacheTtl);
+
+		return query.entries;
 	}
 
 	_tick(ms) {
