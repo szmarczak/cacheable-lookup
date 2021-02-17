@@ -52,7 +52,7 @@ export interface Options {
 	 * **Note**: This has no effect if the `fallbackDuration` option is less than `1`.
 	 * @default dns.lookup
 	 */
-	lookup?: typeof lookup;
+	lookup?: typeof lookup | false;
 }
 
 export interface EntryObject {

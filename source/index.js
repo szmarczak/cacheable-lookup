@@ -80,7 +80,7 @@ class CacheableLookup {
 
 		this._cache = cache;
 		this._resolver = resolver;
-		this._dnsLookup = promisify(lookup);
+		this._dnsLookup = lookup && promisify(lookup);
 
 		if (this._resolver instanceof AsyncResolver) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
@@ -96,11 +96,9 @@ class CacheableLookup {
 		this._nextRemovalTime = false;
 		this._hostnamesToFallback = new Set();
 
-		if (fallbackDuration < 1) {
-			this._fallback = false;
-		} else {
-			this._fallback = true;
+		this.fallbackDuration = fallbackDuration;
 
+		if (fallbackDuration > 0) {
 			const interval = setInterval(() => {
 				this._hostnamesToFallback.clear();
 			}, fallbackDuration * 1000);
@@ -109,6 +107,8 @@ class CacheableLookup {
 			if (interval.unref) {
 				interval.unref();
 			}
+
+			this._fallbackInterval = interval;
 		}
 
 		this.lookup = this.lookup.bind(this);
@@ -326,10 +326,10 @@ class CacheableLookup {
 
 		let query = await this._resolve(hostname);
 
-		if (query.entries.length === 0 && this._fallback) {
+		if (query.entries.length === 0 && this._dnsLookup) {
 			query = await this._lookup(hostname);
 
-			if (query.entries.length !== 0) {
+			if (query.entries.length !== 0 && this.fallbackDuration > 0) {
 				// Use `dns.lookup(...)` for that particular hostname
 				this._hostnamesToFallback.add(hostname);
 			}

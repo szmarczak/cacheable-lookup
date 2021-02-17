@@ -769,7 +769,7 @@ test('custom cache support', async t => {
 });
 
 test.serial('fallback works', async t => {
-	const cacheable = new CacheableLookup({resolver, fallbackDuration: 3600});
+	const cacheable = new CacheableLookup({resolver, fallbackDuration: 0.1});
 	resolver.resetCounter();
 
 	const entries = await cacheable.lookupAsync('osHostname', {all: true});
@@ -790,6 +790,10 @@ test.serial('fallback works', async t => {
 		4: 1,
 		lookup: 2
 	});
+
+	await sleep(100);
+
+	t.is(cacheable._hostnamesToFallback.size, 0);
 });
 
 test.serial('fallback works if ip change', async t => {
@@ -865,7 +869,7 @@ test('real DNS queries first', async t => {
 });
 
 test('fallback can be turned off', async t => {
-	const cacheable = new CacheableLookup({resolver, fallbackDuration: 0});
+	const cacheable = new CacheableLookup({resolver, lookup: false});
 
 	await t.throwsAsync(cacheable.lookupAsync('osHostname', {all: true}), {
 		message: 'cacheableLookup ENOTFOUND osHostname'

@@ -26,6 +26,10 @@ import CacheableLookup, {EntryObject} from '.';
 		lookup
 	});
 
+	new CacheableLookup({
+		lookup: false
+	});
+
 	expectType<string[]>(cacheable.servers);
 
 	expectType<EntryObject>(await cacheable.lookupAsync('localhost', 4));

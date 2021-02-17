@@ -94,7 +94,7 @@ Default: `3600` (1 hour)
 
 When the DNS server responds with `ENOTFOUND` or `ENODATA` and the OS reports that the entry is available, it will use `dns.lookup(...)` directly for the requested hostnames for the specified amount of time (in seconds).
 
-If you don't query internal hostnames (such as `localhost`, `database.local` etc.), it is strongly recommended to set this value to `0`.
+**Note**: You should avoid setting this to `0` unless the provided DNS servers' database is limited to few domains.
 
 ##### options.errorTtl
 
@@ -121,7 +121,7 @@ Default: [`dns.lookup`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_
 
 The fallback function to use when the DNS server responds with `ENOTFOUND` or `ENODATA`.
 
-**Note**: This has no effect if the `fallbackDuration` option is less than `1`.
+If you don't query internal hostnames (such as `localhost`, `database.local` etc.), it is strongly recommended to set this to `false`.
 
 ### Entry object
 
