@@ -37,21 +37,24 @@ import CacheableLookup, {EntryObject} from '.';
 	expectType<ReadonlyArray<EntryObject>>(await cacheable.lookupAsync('localhost', {all: true}));
 
 	cacheable.lookup('localhost', 6, (error, address, family) => {
-		expectType<NodeJS.ErrnoException>(error);
+		expectType<NodeJS.ErrnoException | null>(error);
 		expectType<string>(address);
 		expectType<4 | 6>(family);
 	});
 
 	cacheable.lookup('localhost', {all: false}, (error, address, family) => {
-		expectType<NodeJS.ErrnoException>(error);
+		expectType<NodeJS.ErrnoException | null>(error);
 		expectType<string>(address);
 		expectType<4 | 6>(family);
 	});
 
 	cacheable.lookup('localhost', {all: true}, (error, results) => {
-		expectType<NodeJS.ErrnoException>(error);
+		expectType<NodeJS.ErrnoException | null>(error);
 		expectType<ReadonlyArray<EntryObject>>(results);
 	});
+
+	// @types/node has invalid typings :(
+	// expectType<typeof cacheable.lookup>(lookup);
 
 	expectType<ReadonlyArray<EntryObject>>(await cacheable.query('localhost'));
 	expectType<ReadonlyArray<EntryObject>>(await cacheable.queryAndCache('localhost'));
