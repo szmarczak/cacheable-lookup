@@ -63,6 +63,17 @@ const isIterable = map => {
 	return Symbol.iterator in map;
 };
 
+// Wrap a promise that returns an array, but might throw errors if there's no
+// result available, and map those errors to an empty array result.
+const ignoreNoResultErrors = dnsPromise =>
+	dnsPromise.catch(error => {
+		if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
+			return [];
+		}
+
+		throw error;
+	});
+
 const ttl = {ttl: true};
 const all = {all: true};
 
@@ -222,23 +233,11 @@ class CacheableLookup {
 	}
 
 	async _resolve(hostname) {
-		const wrap = async promise => {
-			try {
-				return await promise;
-			} catch (error) {
-				if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
-					return [];
-				}
-
-				throw error;
-			}
-		};
-
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
 		const [A, AAAA] = await Promise.all([
 			this._resolve4(hostname, ttl),
 			this._resolve6(hostname, ttl)
-		].map(promise => wrap(promise)));
+		].map(promise => ignoreNoResultErrors(promise)));
 
 		let aTtl = 0;
 		let aaaaTtl = 0;
@@ -281,12 +280,16 @@ class CacheableLookup {
 
 	async _lookup(hostname) {
 		try {
-			const entries = await this._dnsLookup(hostname, {
-				all: true
-			});
+			const [ipV4Entries, ipV6Entries] = await Promise.all([
+				// Testing families individually is required, as otherwise a match in a Hosts
+				// file can omit family results available elsewhere unexpectedly. See
+				// https://github.com/szmarczak/cacheable-lookup/issues/42 for more details.
+				ignoreNoResultErrors(this._dnsLookup(hostname, {family: 4, all: true})),
+				ignoreNoResultErrors(this._dnsLookup(hostname, {family: 6, all: true}))
+			]);
 
 			return {
-				entries,
+				entries: ipV4Entries.concat(ipV6Entries),
 				cacheTtl: 0
 			};
 		} catch (_) {

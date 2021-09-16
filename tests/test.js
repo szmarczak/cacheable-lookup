@@ -788,7 +788,7 @@ test.serial('fallback works', async t => {
 	t.deepEqual(resolver.counter, {
 		6: 1,
 		4: 1,
-		lookup: 2
+		lookup: 3
 	});
 
 	await sleep(100);
@@ -1015,12 +1015,21 @@ test('slow dns.lookup', async t => {
 		resolver,
 		lookup: (hostname, options, callback) => {
 			t.is(hostname, 'osHostname');
-			t.deepEqual(options, {all: true});
+			t.is(options.all, true);
+			t.true(options.family === 4 || options.family === 6);
 
 			setTimeout(() => {
-				callback(null, [
-					{address: '127.0.0.1', family: 4}
-				]);
+				if (options.family === 4) {
+					callback(null, [
+						{address: '127.0.0.1', family: 4}
+					]);
+				}
+
+				if (options.family === 6) {
+					callback(null, [
+						{address: '::1', family: 6}
+					]);
+				}
 			}, 10);
 		}
 	});
