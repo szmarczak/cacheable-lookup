@@ -28,6 +28,7 @@ http.get('http://example.com', {lookup: cacheable.lookup}, response => {
 
 ```js
 const http = require('http');
+const https = require('https');
 const CacheableLookup = require('cacheable-lookup');
 
 const cacheable = new CacheableLookup();
