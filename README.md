@@ -32,7 +32,6 @@ const CacheableLookup = require('cacheable-lookup');
 
 const cacheable = new CacheableLookup();
 
-
 ['http', 'https'].forEach(agent => cacheable.install(agent.globalAgent));
 
 http.get('http://example.com', response => {
