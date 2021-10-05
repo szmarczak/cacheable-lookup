@@ -63,8 +63,20 @@ const isIterable = map => {
 	return Symbol.iterator in map;
 };
 
+const ignoreNoResultErrors = dnsPromise => {
+	return dnsPromise.catch(error => {
+		if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
+			return [];
+		}
+
+		throw error;
+	});
+};
+
 const ttl = {ttl: true};
 const all = {all: true};
+const all4 = {all: true, family: 4};
+const all6 = {all: true, family: 6};
 
 class CacheableLookup {
 	constructor({
@@ -222,23 +234,11 @@ class CacheableLookup {
 	}
 
 	async _resolve(hostname) {
-		const wrap = async promise => {
-			try {
-				return await promise;
-			} catch (error) {
-				if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
-					return [];
-				}
-
-				throw error;
-			}
-		};
-
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
 		const [A, AAAA] = await Promise.all([
-			this._resolve4(hostname, ttl),
-			this._resolve6(hostname, ttl)
-		].map(promise => wrap(promise)));
+			ignoreNoResultErrors(this._resolve4(hostname, ttl)),
+			ignoreNoResultErrors(this._resolve6(hostname, ttl))
+		]);
 
 		let aTtl = 0;
 		let aaaaTtl = 0;
@@ -280,21 +280,20 @@ class CacheableLookup {
 	}
 
 	async _lookup(hostname) {
-		try {
-			const entries = await this._dnsLookup(hostname, {
-				all: true
-			});
+		const [A, AAAA] = await Promise.all([
+			// Passing {all: true} doesn't return all IPv4 and IPv6 entries.
+			// See https://github.com/szmarczak/cacheable-lookup/issues/42
+			ignoreNoResultErrors(this._dnsLookup(hostname, all4)),
+			ignoreNoResultErrors(this._dnsLookup(hostname, all6))
+		]);
 
-			return {
-				entries,
-				cacheTtl: 0
-			};
-		} catch (_) {
-			return {
-				entries: [],
-				cacheTtl: 0
-			};
-		}
+		return {
+			entries: [
+				...A,
+				...AAAA
+			],
+			cacheTtl: 0
+		};
 	}
 
 	async _set(hostname, data, cacheTtl) {
