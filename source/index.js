@@ -63,19 +63,20 @@ const isIterable = map => {
 	return Symbol.iterator in map;
 };
 
-// Wrap a promise that returns an array, but might throw errors if there's no
-// result available, and map those errors to an empty array result.
-const ignoreNoResultErrors = dnsPromise =>
-	dnsPromise.catch(error => {
+const ignoreNoResultErrors = dnsPromise => {
+	return dnsPromise.catch(error => {
 		if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
 			return [];
 		}
 
 		throw error;
 	});
+};
 
 const ttl = {ttl: true};
 const all = {all: true};
+const all4 = {all: true, family: 4};
+const all6 = {all: true, family: 6};
 
 class CacheableLookup {
 	constructor({
@@ -235,9 +236,9 @@ class CacheableLookup {
 	async _resolve(hostname) {
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
 		const [A, AAAA] = await Promise.all([
-			this._resolve4(hostname, ttl),
-			this._resolve6(hostname, ttl)
-		].map(promise => ignoreNoResultErrors(promise)));
+			ignoreNoResultErrors(this._resolve4(hostname, ttl)),
+			ignoreNoResultErrors(this._resolve6(hostname, ttl))
+		]);
 
 		let aTtl = 0;
 		let aaaaTtl = 0;
@@ -279,25 +280,20 @@ class CacheableLookup {
 	}
 
 	async _lookup(hostname) {
-		try {
-			const [ipV4Entries, ipV6Entries] = await Promise.all([
-				// Testing families individually is required, as otherwise a match in a Hosts
-				// file can omit family results available elsewhere unexpectedly. See
-				// https://github.com/szmarczak/cacheable-lookup/issues/42 for more details.
-				ignoreNoResultErrors(this._dnsLookup(hostname, {family: 4, all: true})),
-				ignoreNoResultErrors(this._dnsLookup(hostname, {family: 6, all: true}))
-			]);
+		const [A, AAAA] = await Promise.all([
+			// Passing {all: true} doesn't return all IPv4 and IPv6 entries.
+			// See https://github.com/szmarczak/cacheable-lookup/issues/42
+			ignoreNoResultErrors(this._dnsLookup(hostname, all4)),
+			ignoreNoResultErrors(this._dnsLookup(hostname, all6))
+		]);
 
-			return {
-				entries: ipV4Entries.concat(ipV6Entries),
-				cacheTtl: 0
-			};
-		} catch (_) {
-			return {
-				entries: [],
-				cacheTtl: 0
-			};
-		}
+		return {
+			entries: [
+				...A,
+				...AAAA
+			],
+			cacheTtl: 0
+		};
 	}
 
 	async _set(hostname, data, cacheTtl) {
