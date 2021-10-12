@@ -1041,3 +1041,17 @@ test('slow dns.lookup', async t => {
 		family: 4
 	});
 });
+
+test.cb.failing('throws original lookup error if not recognized', t => {
+	const cl = new CacheableLookup({
+		lookup: (hostname, options, callback) => {
+			callback(new Error('Fake DNS error'));
+		}
+	});
+
+	cl.lookup('example.test', error => {
+		t.is(error.message, 'Fake DNS error');
+
+		t.end();
+	});
+});

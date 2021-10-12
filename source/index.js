@@ -280,20 +280,27 @@ class CacheableLookup {
 	}
 
 	async _lookup(hostname) {
-		const [A, AAAA] = await Promise.all([
-			// Passing {all: true} doesn't return all IPv4 and IPv6 entries.
-			// See https://github.com/szmarczak/cacheable-lookup/issues/42
-			ignoreNoResultErrors(this._dnsLookup(hostname, all4)),
-			ignoreNoResultErrors(this._dnsLookup(hostname, all6))
-		]);
+		try {
+			const [A, AAAA] = await Promise.all([
+				// Passing {all: true} doesn't return all IPv4 and IPv6 entries.
+				// See https://github.com/szmarczak/cacheable-lookup/issues/42
+				ignoreNoResultErrors(this._dnsLookup(hostname, all4)),
+				ignoreNoResultErrors(this._dnsLookup(hostname, all6))
+			]);
 
-		return {
-			entries: [
-				...A,
-				...AAAA
-			],
-			cacheTtl: 0
-		};
+			return {
+				entries: [
+					...A,
+					...AAAA
+				],
+				cacheTtl: 0
+			};
+		} catch {
+			return {
+				entries: [],
+				cacheTtl: 0
+			};
+		}
 	}
 
 	async _set(hostname, data, cacheTtl) {
