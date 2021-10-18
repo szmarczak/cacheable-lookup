@@ -65,7 +65,11 @@ const isIterable = map => {
 
 const ignoreNoResultErrors = dnsPromise => {
 	return dnsPromise.catch(error => {
-		if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
+		if (
+			error.code === 'ENODATA' ||
+			error.code === 'ENOTFOUND' ||
+			error.code === 'ENOENT' // Windows: name exists, but not this record type
+		) {
 			return [];
 		}
 
