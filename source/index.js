@@ -207,7 +207,8 @@ class CacheableLookup {
 			return cached;
 		}
 
-		return cached[0];
+		// return a random address for dns load-balance
+		return cached[Math.floor(Math.random() * cached.length)];
 	}
 
 	async query(hostname) {
