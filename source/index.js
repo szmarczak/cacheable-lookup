@@ -109,23 +109,11 @@ class CacheableLookup {
 		this._iface = getIfaceInfo();
 
 		this._pending = {};
-		this._nextRemovalTime = false;
+		this._nextTimeRemovalTick = false;
 		this._hostnamesToFallback = new Set();
 
-		this.fallbackDuration = fallbackDuration;
-
-		if (fallbackDuration > 0) {
-			const interval = setInterval(() => {
-				this._hostnamesToFallback.clear();
-			}, fallbackDuration * 1000);
-
-			/* istanbul ignore next: There is no `interval.unref()` when running inside an Electron renderer */
-			if (interval.unref) {
-				interval.unref();
-			}
-
-			this._fallbackInterval = interval;
-		}
+		this.fallbackDuration = (fallbackDuration && fallbackDuration * 1000) || 0;
+		this.fallbackNextTimeCLear = Date.now() + this.fallbackDuration;
 
 		this.lookup = this.lookup.bind(this);
 		this.lookupAsync = this.lookupAsync.bind(this);
@@ -211,7 +199,15 @@ class CacheableLookup {
 	}
 
 	async query(hostname) {
+		this._tick();
+
 		let cached = await this._cache.get(hostname);
+
+		// Clear fallback cache
+		if (this.fallbackDuration > 0 && this.fallbackNextTimeCLear <= Date.now()) {
+			this._hostnamesToFallback.clear();
+			this.fallbackNextTimeCLear = Date.now() + this.fallbackDuration;
+		}
 
 		if (!cached) {
 			const pending = this._pending[hostname];
@@ -352,39 +348,22 @@ class CacheableLookup {
 	}
 
 	_tick(ms) {
-		const nextRemovalTime = this._nextRemovalTime;
+		const nextTimeRemovalTick = this._nextTimeRemovalTick;
+		const now = Date.now();
 
-		if (!nextRemovalTime || ms < nextRemovalTime) {
-			clearTimeout(this._removalTimeout);
+		if (!nextTimeRemovalTick || nextTimeRemovalTick <= now || (ms && (nextTimeRemovalTick > now + ms))) {
+			let nextRemoval = Infinity;
+			for (const [hostname, entries] of this._cache) {
+				const expires = entries[kExpires];
 
-			this._nextRemovalTime = ms;
-
-			this._removalTimeout = setTimeout(() => {
-				this._nextRemovalTime = false;
-
-				let nextExpiry = Infinity;
-
-				const now = Date.now();
-
-				for (const [hostname, entries] of this._cache) {
-					const expires = entries[kExpires];
-
-					if (now >= expires) {
-						this._cache.delete(hostname);
-					} else if (expires < nextExpiry) {
-						nextExpiry = expires;
-					}
+				if (now >= expires) {
+					this._cache.delete(hostname);
+				} else if (expires < nextRemoval) {
+					nextRemoval = expires;
 				}
-
-				if (nextExpiry !== Infinity) {
-					this._tick(nextExpiry - now);
-				}
-			}, ms);
-
-			/* istanbul ignore next: There is no `timeout.unref()` when running inside an Electron renderer */
-			if (this._removalTimeout.unref) {
-				this._removalTimeout.unref();
 			}
+
+			this._nextTimeRemovalTick = nextRemoval;
 		}
 	}
 
