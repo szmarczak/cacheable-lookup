@@ -49,7 +49,6 @@ const DoHResolver = require('doh-resolver');
 const https = require('https');
 
 const resolver = new DoHResolver({
-  // Your DNS-over-HTTPS servers to target
   servers: ['1.1.1.1', '8.8.8.8'],
   // Under any networking isssue, use OS lookup as fallback
   onError: cb => cb(null, [])
