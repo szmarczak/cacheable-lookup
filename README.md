@@ -41,6 +41,27 @@ http.get('http://example.com', response => {
 });
 ```
 
+### Using DNS-over-HTTPS resolution
+
+```js
+const CacheableLookup = require('cacheable-lookup');
+const DoHResolver = require('doh-resolver');
+const https = require('https');
+
+const resolver = new DoHResolver({
+  // Your DNS-over-HTTPS servers to target
+  servers: ['1.1.1.1', '8.8.8.8'],
+  // Under any networking isssue, use OS lookup as fallback
+  onError: cb => cb(null, [])
+})
+
+const cacheable = new CacheableLookup({ resolver });
+
+http.get('http://example.com', {lookup: cacheable.lookup}, response => {
+	// Handle the response here
+});
+```
+
 ## API
 
 ### new CacheableLookup(options)
