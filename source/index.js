@@ -77,8 +77,7 @@ const ignoreNoResultErrors = dnsPromise => {
 	});
 };
 
-const ttl4 = {ttl: true, all: true, family: 4};
-const ttl6 = {ttl: true, all: true, family: 6};
+const ttl = {ttl: true};
 const all = {all: true};
 const all4 = {all: true, family: 4};
 const all6 = {all: true, family: 6};
@@ -241,17 +240,18 @@ class CacheableLookup {
 
 	async _resolve(hostname, family) {
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
+		console.log( 'fet1')
 		let promiseArray = []
 		switch (family) {
 			case 4:
-				promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl4)));
+				promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl)));
 				break;
 			case 6:
-				promiseArray.push(ignoreNoResultErrors(this._resolve6(hostname, ttl6)))
+				promiseArray.push(ignoreNoResultErrors(this._resolve6(hostname, ttl)))
 				break;
 			default:
-				promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl4)));
-				promiseArray.push(ignoreNoResultErrors(this._resolve6(hostname, ttl6)))
+				promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl)));
+				promiseArray.push(ignoreNoResultErrors(this._resolve6(hostname, ttl)))
 				break;
 		}
 
