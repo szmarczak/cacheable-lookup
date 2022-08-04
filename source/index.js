@@ -77,7 +77,8 @@ const ignoreNoResultErrors = dnsPromise => {
 	});
 };
 
-const ttl = {ttl: true};
+const ttl4 = {ttl: true, all: true, family: 4};
+const ttl6 = {ttl: true, all: true, family: 6};
 const all = {all: true};
 const all4 = {all: true, family: 4};
 const all6 = {all: true, family: 6};
@@ -172,7 +173,8 @@ class CacheableLookup {
 			};
 		}
 
-		let cached = await this.query(hostname);
+
+		let cached = await this.query(hostname, options);
 
 		if (options.family === 6) {
 			const filtered = cached.filter(entry => entry.family === 6);
@@ -210,7 +212,7 @@ class CacheableLookup {
 		return cached[0];
 	}
 
-	async query(hostname) {
+	async query(hostname, options) {
 		let cached = await this._cache.get(hostname);
 
 		if (!cached) {
@@ -219,7 +221,7 @@ class CacheableLookup {
 			if (pending) {
 				cached = await pending;
 			} else {
-				const newPromise = this.queryAndCache(hostname);
+				const newPromise = this.queryAndCache(hostname, options);
 				this._pending[hostname] = newPromise;
 
 				try {
@@ -237,12 +239,23 @@ class CacheableLookup {
 		return cached;
 	}
 
-	async _resolve(hostname) {
+	async _resolve(hostname, family) {
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
-		const [A, AAAA] = await Promise.all([
-			ignoreNoResultErrors(this._resolve4(hostname, ttl)),
-			ignoreNoResultErrors(this._resolve6(hostname, ttl))
-		]);
+		let promiseArray = []
+		switch (family) {
+			case 4:
+				promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl4)));
+				break;
+			case 6:
+				promiseArray.push(ignoreNoResultErrors(this._resolve6(hostname, ttl6)))
+				break;
+			default:
+				promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl4)));
+				promiseArray.push(ignoreNoResultErrors(this._resolve6(hostname, ttl6)))
+				break;
+		}
+
+		let [A, AAAA] = await Promise.all(promiseArray);
 
 		let aTtl = 0;
 		let aaaaTtl = 0;
@@ -250,6 +263,8 @@ class CacheableLookup {
 
 		const now = Date.now();
 
+		if (!A) A = [];
+		if (!AAAA) AAAA = [];
 		for (const entry of A) {
 			entry.family = 4;
 			entry.expires = now + (entry.ttl * 1000);
@@ -329,12 +344,12 @@ class CacheableLookup {
 		}
 	}
 
-	async queryAndCache(hostname) {
+	async queryAndCache(hostname, options) {
 		if (this._hostnamesToFallback.has(hostname)) {
 			return this._dnsLookup(hostname, all);
 		}
 
-		let query = await this._resolve(hostname);
+		let query = await this._resolve(hostname, options.family);
 
 		if (query.entries.length === 0 && this._dnsLookup) {
 			query = await this._lookup(hostname);
