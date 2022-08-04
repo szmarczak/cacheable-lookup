@@ -239,19 +239,19 @@ class CacheableLookup {
 
 	async _resolve(hostname, family) {
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
-		let promiseArray = [];
+		const promiseArray = [];
 		if (family === 4) {
 			promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl)), []);
 		} else if (family === 6) {
-	        promiseArray.push([], ignoreNoResultErrors(this._resolve6(hostname, ttl)));
+			promiseArray.push([], ignoreNoResultErrors(this._resolve6(hostname, ttl)));
 		} else {
 			promiseArray.push(
 				ignoreNoResultErrors(this._resolve4(hostname, ttl)),
 				ignoreNoResultErrors(this._resolve6(hostname, ttl))
-				);
+			);
 		}
 
-		let [A, AAAA] = await Promise.all(promiseArray);
+		const [A, AAAA] = await Promise.all(promiseArray);
 
 		let aTtl = 0;
 		let aaaaTtl = 0;
