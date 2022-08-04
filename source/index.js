@@ -172,7 +172,6 @@ class CacheableLookup {
 			};
 		}
 
-
 		let cached = await this.query(hostname, options);
 
 		if (options.family === 6) {
