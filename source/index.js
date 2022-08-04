@@ -239,19 +239,16 @@ class CacheableLookup {
 
 	async _resolve(hostname, family) {
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
-		console.log( 'fet1')
-		let promiseArray = []
-		switch (family) {
-			case 4:
-				promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl)));
-				break;
-			case 6:
-				promiseArray.push(ignoreNoResultErrors(this._resolve6(hostname, ttl)))
-				break;
-			default:
-				promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl)));
-				promiseArray.push(ignoreNoResultErrors(this._resolve6(hostname, ttl)))
-				break;
+		let promiseArray = [];
+		if (family === 4) {
+			promiseArray.push(ignoreNoResultErrors(this._resolve4(hostname, ttl)), []);
+		} else if (family === 6) {
+	        promiseArray.push([], ignoreNoResultErrors(this._resolve6(hostname, ttl)));
+		} else {
+			promiseArray.push(
+				ignoreNoResultErrors(this._resolve4(hostname, ttl)),
+				ignoreNoResultErrors(this._resolve6(hostname, ttl))
+				);
 		}
 
 		let [A, AAAA] = await Promise.all(promiseArray);
@@ -262,8 +259,6 @@ class CacheableLookup {
 
 		const now = Date.now();
 
-		if (!A) A = [];
-		if (!AAAA) AAAA = [];
 		for (const entry of A) {
 			entry.family = 4;
 			entry.expires = now + (entry.ttl * 1000);
