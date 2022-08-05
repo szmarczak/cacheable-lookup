@@ -1,21 +1,12 @@
 import {Resolver, lookup} from 'dns';
 import {Agent} from 'https';
 import {expectType} from 'tsd';
-import Keyv = require('keyv');
-import QuickLRU = require('quick-lru');
+import * as QuickLRU from 'quick-lru';
 import CacheableLookup, {EntryObject} from '.';
 
 (async () => {
 	const cacheable = new CacheableLookup();
 	const agent = new Agent();
-
-	new CacheableLookup({
-		cache: new Keyv(),
-		fallbackDuration: 0,
-		errorTtl: 0,
-		maxTtl: 0,
-		resolver: new Resolver()
-	});
 
 	new CacheableLookup({
 		cache: new QuickLRU({maxSize: 100}),
