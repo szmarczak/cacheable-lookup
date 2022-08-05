@@ -4,6 +4,7 @@ import {Agent} from 'http';
 type AsyncResolver = dnsPromises.Resolver;
 
 export type IPFamily = 4 | 6;
+export type EntrySource = 'query' | 'cache';
 
 type TPromise<T> = T | Promise<T>;
 
@@ -72,6 +73,10 @@ export interface EntryObject {
 	 * The expiration timestamp.
 	 */
 	readonly expires?: number;
+	/**
+	 * Whether this entry comes from the cache or a query
+	 */
+	readonly source?: EntrySource;
 }
 
 export interface LookupOptions {

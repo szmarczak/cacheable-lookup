@@ -237,6 +237,7 @@ const verify = (t, entry, value) => {
 		for (const key in value) {
 			t.true(typeof entry[key].expires === 'number' && entry[key].expires >= Date.now() - 1000);
 			t.true(typeof entry[key].ttl === 'number' && entry[key].ttl >= 0);
+			t.true(['cache', 'query'].includes(entry[key].source));
 
 			if (!('ttl' in value[key]) && 'ttl' in entry[key]) {
 				value[key].ttl = entry[key].ttl;
@@ -245,10 +246,15 @@ const verify = (t, entry, value) => {
 			if (!('expires' in value[key]) && 'expires' in entry[key]) {
 				value[key].expires = entry[key].expires;
 			}
+
+			if (!('source' in value[key]) && 'source' in entry[key]) {
+				value[key].source = entry[key].source;
+			}
 		}
 	} else {
 		t.true(typeof entry.expires === 'number' && entry.expires >= Date.now() - 1000);
 		t.true(typeof entry.ttl === 'number' && entry.ttl >= 0);
+		t.true(['cache', 'query'].includes(entry.source));
 
 		if (!('ttl' in value)) {
 			value.ttl = entry.ttl;
@@ -256,6 +262,10 @@ const verify = (t, entry, value) => {
 
 		if (!('expires' in value)) {
 			value.expires = entry.expires;
+		}
+
+		if (!('source' in value)) {
+			value.source = entry.source;
 		}
 	}
 
@@ -401,7 +411,7 @@ test.serial('caching works', async t => {
 	// Make sure default behavior is right
 	let entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
 	verify(t, entries, [
-		{address: '127.0.0.1', family: 4}
+		{address: '127.0.0.1', family: 4, source: 'query'}
 	]);
 
 	// Update DNS data
@@ -409,10 +419,10 @@ test.serial('caching works', async t => {
 	const {address: resolverAddress} = resovlerEntry;
 	resovlerEntry.address = '127.0.0.2';
 
-	// Lookup again
+	// Lookup again returns cached data
 	entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
 	verify(t, entries, [
-		{address: '127.0.0.1', family: 4}
+		{address: '127.0.0.1', family: 4, source: 'cache'}
 	]);
 
 	// Restore back
@@ -486,7 +496,7 @@ test('callback style', async t => {
 
 	// Without options
 	let result = await lookup('localhost');
-	t.is(result.length, 4);
+	t.is(result.length, 5);
 	t.is(result[0], '127.0.0.1');
 	t.is(result[1], 4);
 	t.true(typeof result[2] === 'number' && result[2] >= Date.now() - 1000);
@@ -1038,7 +1048,8 @@ test('slow dns.lookup', async t => {
 
 	t.deepEqual(entry, {
 		address: '127.0.0.1',
-		family: 4
+		family: 4,
+		source: 'query'
 	});
 });
 

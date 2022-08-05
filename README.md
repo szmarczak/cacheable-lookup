@@ -156,6 +156,12 @@ The timestamp (`Date.now() + ttl * 1000`) when the entry expires.
 
 The time in seconds for its lifetime.
 
+#### source
+
+**Note**: This is not present when falling back to `dns.lookup(...)`!
+
+Whether this entry was loaded from the cache or came from a query (`cache` or `query`)
+
 ### Entry object (callback-style)
 
 When `options.all` is `false`, then `callback(error, address, family, expires, ttl)` is called. <br>
