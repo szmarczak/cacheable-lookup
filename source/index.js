@@ -160,7 +160,7 @@ class CacheableLookup {
 			if (options.all) {
 				callback(null, result);
 			} else {
-				callback(null, result.address, result.family, result.expires, result.ttl);
+				callback(null, result.address, result.family, result.expires, result.ttl, result.source);
 			}
 		}, callback);
 	}
@@ -211,6 +211,7 @@ class CacheableLookup {
 	}
 
 	async query(hostname) {
+		let source = 'cache';
 		let cached = await this._cache.get(hostname);
 
 		if (!cached) {
@@ -219,6 +220,7 @@ class CacheableLookup {
 			if (pending) {
 				cached = await pending;
 			} else {
+				source = 'query';
 				const newPromise = this.queryAndCache(hostname);
 				this._pending[hostname] = newPromise;
 
@@ -231,7 +233,7 @@ class CacheableLookup {
 		}
 
 		cached = cached.map(entry => {
-			return {...entry};
+			return {...entry, source};
 		});
 
 		return cached;
