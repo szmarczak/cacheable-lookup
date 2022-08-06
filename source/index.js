@@ -141,6 +141,10 @@ class CacheableLookup {
 		return this._resolver.getServers();
 	}
 
+	get numberOfCachedCalls() {
+		return this._cache.size
+	}
+
 	lookup(hostname, options, callback) {
 		if (typeof options === 'function') {
 			callback = options;
