@@ -1067,3 +1067,21 @@ test.cb.failing('throws original lookup error if not recognized', t => {
 		t.end();
 	});
 });
+
+test('cache and query stats', async t => {
+	const cacheable = new CacheableLookup();
+	t.is(cacheable.stats.query, 0);
+	t.is(cacheable.stats.cache, 0);
+
+	await cacheable.lookupAsync('1dot1dot1dot1.cloudflare-dns.com');
+	t.is(cacheable.stats.query, 1);
+	t.is(cacheable.stats.cache, 1);
+
+	await cacheable.lookupAsync('1dot1dot1dot1.cloudflare-dns.com');
+	t.is(cacheable.stats.query, 2);
+	t.is(cacheable.stats.cache, 1);
+
+	await cacheable.lookupAsync('google.com');
+	t.is(cacheable.stats.query, 3);
+	t.is(cacheable.stats.cache, 2);
+});
