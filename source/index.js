@@ -215,19 +215,23 @@ class CacheableLookup {
 	}
 
 	async query(hostname) {
-		this.stats.query++;
 		let source = 'cache';
 		let cached = await this._cache.get(hostname);
+
+		if (cached) {
+			this.stats.cache++;
+		}
 
 		if (!cached) {
 			const pending = this._pending[hostname];
 			if (pending) {
+				this.stats.cache++;
 				cached = await pending;
 			} else {
 				source = 'query';
 				const newPromise = this.queryAndCache(hostname);
 				this._pending[hostname] = newPromise;
-				this.stats.cache++;
+				this.stats.query++;
 				try {
 					cached = await newPromise;
 				} finally {
