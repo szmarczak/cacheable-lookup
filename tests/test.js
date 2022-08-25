@@ -1071,29 +1071,23 @@ test.cb.failing('throws original lookup error if not recognized', t => {
 test('cache and query stats', async t => {
 	const cacheable = new CacheableLookup({resolver});
 
-	let entries = await cacheable.lookupAsync('1dot1dot1dot1.cloudflare-dns.com', {all: true, family: 4});
+	t.is(cacheable.stats.query, 0);
+	t.is(cacheable.stats.cache, 0);
+
+	let entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
 	verify(t, entries, [
-		{family: 4, source: 'query'}
+		{address: '127.0.0.1', family: 4, source: 'query'}
 	]);
 
 	t.is(cacheable.stats.query, 1);
 	t.is(cacheable.stats.cache, 0);
 
-	entries = await cacheable.lookupAsync('1dot1dot1dot1.cloudflare-dns.com', {all: true, family: 4});
+	entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
 
 	verify(t, entries, [
-		{family: 4, source: 'cache'}
+		{address: '127.0.0.1', family: 4, source: 'cache'}
 	]);
 
 	t.is(cacheable.stats.query, 1);
-	t.is(cacheable.stats.cache, 1);
-
-	entries = await cacheable.lookupAsync('google.com', {all: true, family: 4});
-
-	verify(t, entries, [
-		{family: 4, source: 'query'}
-	]);
-
-	t.is(cacheable.stats.query, 2);
 	t.is(cacheable.stats.cache, 1);
 });
