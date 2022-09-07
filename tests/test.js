@@ -1067,3 +1067,27 @@ test.cb.failing('throws original lookup error if not recognized', t => {
 		t.end();
 	});
 });
+
+test('cache and query stats', async t => {
+	const cacheable = new CacheableLookup({resolver});
+
+	t.is(cacheable.stats.query, 0);
+	t.is(cacheable.stats.cache, 0);
+
+	let entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
+	verify(t, entries, [
+		{address: '127.0.0.1', family: 4, source: 'query'}
+	]);
+
+	t.is(cacheable.stats.query, 1);
+	t.is(cacheable.stats.cache, 0);
+
+	entries = await cacheable.lookupAsync('temporary', {all: true, family: 4});
+
+	verify(t, entries, [
+		{address: '127.0.0.1', family: 4, source: 'cache'}
+	]);
+
+	t.is(cacheable.stats.query, 1);
+	t.is(cacheable.stats.cache, 1);
+});

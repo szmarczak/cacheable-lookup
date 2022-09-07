@@ -97,6 +97,10 @@ class CacheableLookup {
 		this._cache = cache;
 		this._resolver = resolver;
 		this._dnsLookup = lookup && promisify(lookup);
+		this.stats = {
+			cache: 0,
+			query: 0
+		};
 
 		if (this._resolver instanceof AsyncResolver) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
@@ -214,16 +218,20 @@ class CacheableLookup {
 		let source = 'cache';
 		let cached = await this._cache.get(hostname);
 
+		if (cached) {
+			this.stats.cache++;
+		}
+
 		if (!cached) {
 			const pending = this._pending[hostname];
-
 			if (pending) {
+				this.stats.cache++;
 				cached = await pending;
 			} else {
 				source = 'query';
 				const newPromise = this.queryAndCache(hostname);
 				this._pending[hostname] = newPromise;
-
+				this.stats.query++;
 				try {
 					cached = await newPromise;
 				} finally {
