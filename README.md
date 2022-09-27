@@ -14,8 +14,8 @@ Making lots of HTTP requests? You can save some time by caching DNS lookups :zap
 ### Using the `lookup` option
 
 ```js
-const http = require('http');
-const CacheableLookup = require('cacheable-lookup');
+import http from 'node:http';
+import CacheableLookup from 'cacheable-lookup';
 
 const cacheable = new CacheableLookup();
 
@@ -27,9 +27,9 @@ http.get('http://example.com', {lookup: cacheable.lookup}, response => {
 ### Attaching CacheableLookup to an Agent
 
 ```js
-const http = require('http');
-const https = require('https');
-const CacheableLookup = require('cacheable-lookup');
+import http from 'node:http';
+import https from 'node:https';
+import CacheableLookup from 'cacheable-lookup';
 
 const cacheable = new CacheableLookup();
 
@@ -49,14 +49,14 @@ Returns a new instance of `CacheableLookup`.
 
 #### options
 
-Type: `object`<br>
+Type: `object`\
 Default: `{}`
 
 Options used to cache the DNS lookups.
 
 ##### cache
 
-Type: `Map` | [`Keyv`](https://github.com/lukechilds/keyv/)<br>
+Type: `Map` | [`Keyv`](https://github.com/lukechilds/keyv/)\
 Default: `new Map()`
 
 Custom cache instance. If `undefined`, it will create a new one.
@@ -66,9 +66,9 @@ Custom cache instance. If `undefined`, it will create a new one.
 **Tip**: [`QuickLRU`](https://github.com/sindresorhus/quick-lru) is fully compatible with the Map API, you can use it to limit the amount of cached entries. Example:
 
 ```js
-const http = require('http');
-const CacheableLookup = require('cacheable-lookup');
-const QuickLRU = require('quick-lru');
+import http from 'node:http';
+import CacheableLookup from 'cacheable-lookup';
+import QuickLRU from 'quick-lru';
 
 const cacheable = new CacheableLookup({
 	cache: new QuickLRU({maxSize: 1000})
@@ -81,7 +81,7 @@ http.get('http://example.com', {lookup: cacheable.lookup}, response => {
 
 ##### options.maxTtl
 
-Type: `number`<br>
+Type: `number`\
 Default: `Infinity`
 
 The maximum lifetime of the entries received from the specifed DNS server (TTL in seconds).
@@ -92,7 +92,7 @@ If set to `0`, it will make a new DNS query each time.
 
 ##### options.fallbackDuration
 
-Type: `number`<br>
+Type: `number`\
 Default: `3600` (1 hour)
 
 When the DNS server responds with `ENOTFOUND` or `ENODATA` and the OS reports that the entry is available, it will use `dns.lookup(...)` directly for the requested hostnames for the specified amount of time (in seconds).
@@ -101,7 +101,7 @@ When the DNS server responds with `ENOTFOUND` or `ENODATA` and the OS reports th
 
 ##### options.errorTtl
 
-Type: `number`<br>
+Type: `number`\
 Default: `0.15`
 
 The time how long it needs to remember queries that threw `ENOTFOUND` or `ENODATA` (TTL in seconds).
@@ -112,14 +112,14 @@ The time how long it needs to remember queries that threw `ENOTFOUND` or `ENODAT
 
 ##### options.resolver
 
-Type: `dns.Resolver | dns.promises.Resolver`<br>
+Type: `dns.Resolver | dns.promises.Resolver`\
 Default: [`new dns.promises.Resolver()`](https://nodejs.org/api/dns.html#dns_class_dns_resolver)
 
 An instance of [DNS Resolver](https://nodejs.org/api/dns.html#dns_class_dns_resolver) used to make DNS queries.
 
 ##### options.lookup
 
-Type: `Function`<br>
+Type: `Function`\
 Default: [`dns.lookup`](https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback)
 
 The fallback function to use when the DNS server responds with `ENOTFOUND` or `ENODATA`.
@@ -164,7 +164,7 @@ Whether this entry was loaded from the cache or came from a query (`cache` or `q
 
 ### Entry object (callback-style)
 
-When `options.all` is `false`, then `callback(error, address, family, expires, ttl)` is called. <br>
+When `options.all` is `false`, then `callback(error, address, family, expires, ttl)` is called.\
 When `options.all` is `true`, then `callback(error, entries)` is called.
 
 ### CacheableLookup instance
@@ -181,7 +181,7 @@ The DNS servers used to make queries. Can be overridden - doing so will clear th
 
 The asynchronous version of `dns.lookup(…)`.
 
-Returns an [entry object](#entry-object).<br>
+Returns an [entry object](#entry-object).\
 If `options.all` is true, returns an array of entry objects.
 
 ##### hostname
@@ -196,7 +196,7 @@ The same as the [`dns.lookup(…)`](https://nodejs.org/api/dns.html#dns_dns_look
 
 #### query(hostname)
 
-An asynchronous function which returns cached DNS lookup entries.<br>
+An asynchronous function which returns cached DNS lookup entries.\
 This is the base for `lookupAsync(hostname, options)` and `lookup(hostname, options, callback)`.
 
 **Note**: This function has no options.
@@ -205,7 +205,7 @@ Returns an array of objects with `address`, `family`, `ttl` and `expires` proper
 
 #### queryAndCache(hostname)
 
-An asynchronous function which makes two DNS queries: A and AAAA. The result is cached.<br>
+An asynchronous function which makes two DNS queries: A and AAAA. The result is cached.\
 This is used by `query(hostname)` if no entry in the database is present.
 
 Returns an array of objects with `address`, `family`, `ttl` and `expires` properties.
@@ -242,8 +242,4 @@ Fastest is CacheableLookup#lookupAsync.all
 
 ## Related
 
- - [cacheable-request](https://github.com/lukechilds/cacheable-request) - Wrap native HTTP requests with RFC compliant cache support
-
-## License
-
-MIT
+- [cacheable-request](https://github.com/lukechilds/cacheable-request) - Wrap native HTTP requests with RFC compliant cache support

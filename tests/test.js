@@ -1,11 +1,13 @@
-const {V4MAPPED, ADDRCONFIG, ALL} = require('dns');
-const {Resolver: AsyncResolver} = require('dns').promises;
-const {promisify} = require('util');
-const http = require('http');
-const test = require('ava');
-const Keyv = require('keyv');
-const proxyquire = require('proxyquire');
-const QuickLRU = require('quick-lru');
+import {promises as dnsPromises, V4MAPPED, ADDRCONFIG, ALL} from 'node:dns';
+import {promisify} from 'node:util';
+import http from 'node:http';
+import originalDns from 'node:dns';
+import test from 'ava';
+import Keyv from 'keyv';
+import quibble from 'quibble';
+import QuickLRU from 'quick-lru';
+
+const {Resolver: AsyncResolver} = dnsPromises;
 
 const makeRequest = options => new Promise((resolve, reject) => {
 	http.get(options, resolve).once('error', reject);
@@ -13,7 +15,7 @@ const makeRequest = options => new Promise((resolve, reject) => {
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const mockedInterfaces = options => {
+const mockedInterfaces = async options => {
 	const createInterfaces = (options = {}) => {
 		const interfaces = {
 			lo: [
@@ -56,11 +58,13 @@ const mockedInterfaces = options => {
 		interfaces = createInterfaces(options);
 	};
 
-	const result = proxyquire('../source', {
-		os: {
-			networkInterfaces: () => interfaces
-		}
-	});
+	const osExports = {
+		networkInterfaces: () => interfaces
+	};
+
+	await quibble.esm('node:os', osExports, osExports);
+
+	const {default: result} = await import('../source/index.js');
 
 	result._updateInterfaces = _updateInterfaces;
 
@@ -225,11 +229,14 @@ const createResolver = () => {
 
 const resolver = createResolver();
 
-const CacheableLookup = proxyquire('../source', {
-	dns: {
-		lookup: resolver.lookup
-	}
-});
+const dnsExports = {
+	...originalDns,
+	lookup: resolver.lookup
+};
+
+await quibble.esm('node:dns', dnsExports, dnsExports);
+
+const {default: CacheableLookup} = await import('../source/index.js');
 
 const verify = (t, entry, value) => {
 	if (Array.isArray(value)) {
@@ -351,7 +358,7 @@ if (process.versions.node.split('.')[0] >= 14) {
 test('ADDRCONFIG hint', async t => {
 	//=> has6 = false, family = 6
 	{
-		const CacheableLookup = mockedInterfaces({has4: true, has6: false});
+		const CacheableLookup = await mockedInterfaces({has4: true, has6: false});
 		const cacheable = new CacheableLookup({resolver});
 
 		await t.throwsAsync(cacheable.lookupAsync('localhost', {family: 6, hints: ADDRCONFIG}), {code: 'ENOTFOUND'});
@@ -359,7 +366,7 @@ test('ADDRCONFIG hint', async t => {
 
 	//=> has6 = true, family = 6
 	{
-		const CacheableLookup = mockedInterfaces({has4: true, has6: true});
+		const CacheableLookup = await mockedInterfaces({has4: true, has6: true});
 		const cacheable = new CacheableLookup({resolver});
 
 		verify(t, await cacheable.lookupAsync('localhost', {family: 6, hints: ADDRCONFIG}), {
@@ -370,7 +377,7 @@ test('ADDRCONFIG hint', async t => {
 
 	//=> has4 = false, family = 4
 	{
-		const CacheableLookup = mockedInterfaces({has4: false, has6: true});
+		const CacheableLookup = await mockedInterfaces({has4: false, has6: true});
 		const cacheable = new CacheableLookup({resolver});
 
 		await t.throwsAsync(cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {code: 'ENOTFOUND'});
@@ -378,7 +385,7 @@ test('ADDRCONFIG hint', async t => {
 
 	//=> has4 = true, family = 4
 	{
-		const CacheableLookup = mockedInterfaces({has4: true, has6: true});
+		const CacheableLookup = await mockedInterfaces({has4: true, has6: true});
 		const cacheable = new CacheableLookup({resolver});
 
 		verify(t, await cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {
@@ -389,7 +396,7 @@ test('ADDRCONFIG hint', async t => {
 
 	// Update interface info
 	{
-		const CacheableLookup = mockedInterfaces({has4: false, has6: true});
+		const CacheableLookup = await mockedInterfaces({has4: false, has6: true});
 		const cacheable = new CacheableLookup({resolver});
 
 		await t.throwsAsync(cacheable.lookupAsync('localhost', {family: 4, hints: ADDRCONFIG}), {code: 'ENOTFOUND'});
@@ -942,7 +949,7 @@ test('prevents overloading DNS', async t => {
 });
 
 test('returns IPv6 if no other entries available', async t => {
-	const CacheableLookup = mockedInterfaces({has4: false, has6: true});
+	const CacheableLookup = await mockedInterfaces({has4: false, has6: true});
 	const cacheable = new CacheableLookup({resolver});
 
 	verify(t, await cacheable.lookupAsync('localhost', {hints: ADDRCONFIG}), {
@@ -1054,19 +1061,20 @@ test('slow dns.lookup', async t => {
 	});
 });
 
-test.cb.failing('throws original lookup error if not recognized', t => {
-	const cl = new CacheableLookup({
-		lookup: (hostname, options, callback) => {
-			callback(new Error('Fake DNS error'));
-		}
-	});
+// TODO: Use `p-event`.`
+// test.cb.failing('throws original lookup error if not recognized', t => {
+// 	const cl = new CacheableLookup({
+// 		lookup: (hostname, options, callback) => {
+// 			callback(new Error('Fake DNS error'));
+// 		}
+// 	});
 
-	cl.lookup('example.test', error => {
-		t.is(error.message, 'Fake DNS error');
+// 	cl.lookup('example.test', error => {
+// 		t.is(error.message, 'Fake DNS error');
 
-		t.end();
-	});
-});
+// 		t.end();
+// 	});
+// });
 
 test('cache and query stats', async t => {
 	const cacheable = new CacheableLookup({resolver});

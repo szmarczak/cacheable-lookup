@@ -1,15 +1,14 @@
-'use strict';
-const {
+import {
 	V4MAPPED,
 	ADDRCONFIG,
 	ALL,
-	promises: {
-		Resolver: AsyncResolver
-	},
-	lookup: dnsLookup
-} = require('dns');
-const {promisify} = require('util');
-const os = require('os');
+	promises as dnsPromises,
+	lookup as dnsLookup
+} from 'node:dns';
+import {promisify} from 'node:util';
+import os from 'node:os';
+
+const {Resolver: AsyncResolver} = dnsPromises;
 
 const kCacheableLookupCreateConnection = Symbol('cacheableLookupCreateConnection');
 const kCacheableLookupInstance = Symbol('cacheableLookupInstance');
@@ -82,7 +81,7 @@ const all = {all: true};
 const all4 = {all: true, family: 4};
 const all6 = {all: true, family: 6};
 
-class CacheableLookup {
+export default class CacheableLookup {
 	constructor({
 		cache = new Map(),
 		maxTtl = Infinity,
@@ -451,6 +450,3 @@ class CacheableLookup {
 		this._cache.clear();
 	}
 }
-
-module.exports = CacheableLookup;
-module.exports.default = CacheableLookup;

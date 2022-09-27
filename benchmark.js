@@ -1,7 +1,6 @@
-'use strict';
-const dns = require('dns');
-const Benchmark = require('benchmark');
-const CacheableLookup = require('.');
+import dns from 'node:dns';
+import Benchmark from 'benchmark';
+import CacheableLookup from './source/index.js';
 
 const cacheable = new CacheableLookup();
 const suite = new Benchmark.Suite();
