@@ -3,13 +3,13 @@
   "version": "6.1.0",
   "description": "A cacheable dns.lookup(…) that respects TTL",
   "engines": {
-    "node": ">=10.6.0"
+    "node": ">=14.16"
   },
   "files": [
     "source",
     "index.d.ts"
   ],
-	"type": "module",
+  "type": "module",
   "exports": "./source/index.js",
   "types": "./index.d.ts",
   "scripts": {
