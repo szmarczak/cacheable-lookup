@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "exports": {
-    "types": "./index.d.ts",
+    "types": "./index.d.mts",
     "default": "./source/index.mjs"
   },
   "scripts": {
