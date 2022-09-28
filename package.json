@@ -7,11 +7,11 @@
   },
   "files": [
     "source",
-    "index.d.mts"
+    "index.d.ts"
   ],
   "type": "module",
   "exports": {
-    "types": "./index.d.mts",
+    "types": "./index.d.ts",
     "default": "./source/index.mjs"
   },
   "scripts": {
