@@ -7,16 +7,15 @@
   },
   "files": [
     "source",
-    "index.d.ts"
+    "index.d.mts"
   ],
   "type": "module",
   "exports": {
     "types": "./index.d.ts",
-    "default": "./source/index.js"
+    "default": "./source/index.mjs"
   },
   "scripts": {
-    "//test": "xo && nyc --reporter=lcovonly --reporter=text ava && tsd",
-    "test": "tsd"
+    "test": "xo && nyc --reporter=lcovonly --reporter=text ava && tsd"
   },
   "repository": {
     "type": "git",
