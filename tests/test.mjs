@@ -64,7 +64,7 @@ const mockedInterfaces = async options => {
 
 	await quibble.esm('node:os', osExports, osExports);
 
-	const {default: result} = await import('../source/index.js');
+	const {default: result} = await import('../source/index.mjs');
 
 	result._updateInterfaces = _updateInterfaces;
 
@@ -236,7 +236,7 @@ const dnsExports = {
 
 await quibble.esm('node:dns', dnsExports, dnsExports);
 
-const {default: CacheableLookup} = await import('../source/index.js');
+const {default: CacheableLookup} = await import('../source/index.mjs');
 
 const verify = (t, entry, value) => {
 	if (Array.isArray(value)) {
@@ -355,7 +355,8 @@ if (process.versions.node.split('.')[0] >= 14) {
 	});
 }
 
-test('ADDRCONFIG hint', async t => {
+// FIXME: this shouldn't be serial
+test.serial('ADDRCONFIG hint', async t => {
 	//=> has6 = false, family = 6
 	{
 		const CacheableLookup = await mockedInterfaces({has4: true, has6: false});
