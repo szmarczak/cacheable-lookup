@@ -2,6 +2,7 @@ import {
 	V4MAPPED,
 	ADDRCONFIG,
 	ALL,
+	Resolver as SyncResolver,
 	promises as dnsPromises,
 	lookup as dnsLookup
 } from 'node:dns';
@@ -101,7 +102,7 @@ export default class CacheableLookup {
 			query: 0
 		};
 
-		if (this._resolver instanceof AsyncResolver) {
+		if (this._resolver instanceof AsyncResolver || !(this._resolver instanceof SyncResolver)) {
 			this._resolve4 = this._resolver.resolve4.bind(this._resolver);
 			this._resolve6 = this._resolver.resolve6.bind(this._resolver);
 		} else {
