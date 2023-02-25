@@ -41,6 +41,32 @@ http.get('http://example.com', response => {
 });
 ```
 
+### Using the `lookup` with DNS over HTTPS ("DoH")
+
+This example uses [tangerine](https://github.com/forwardemail/tangerine) to perform [DNS over HTTPS](https://en.wikipedia.org/wiki/DNS_over_HTTPS) ("DoH") lookup (instead of using the native Node.js `dns` module which uses [c-ares](https://c-ares.org/) under the hood).
+
+```sh
+npm install tangerine undici
+```
+
+```js
+import http from 'node:http';
+import CacheableLookup from 'cacheable-lookup';
+import Tangerine from 'tangerine';
+
+const cacheable = new CacheableLookup({
+	resolver: new Tangerine({
+		// explicitly disabled since `cacheable-lookup` already takes case
+		// <https://github.com/forwardemail/tangerine/issues/1>
+		cache: false
+	});
+});
+
+http.get('http://example.com', {lookup: cacheable.lookup}, response => {
+	// Handle the response here
+});
+```
+
 ## API
 
 ### new CacheableLookup(options)
