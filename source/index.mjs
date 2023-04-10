@@ -449,4 +449,9 @@ export default class CacheableLookup {
 
 		this._cache.clear();
 	}
+
+  destroy() {
+    this.clear();
+    clearInterval(this._fallbackInterval);
+  }
 }
