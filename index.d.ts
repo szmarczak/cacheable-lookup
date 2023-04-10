@@ -141,4 +141,8 @@ export default class CacheableLookup {
 	 * Clears the cache for the given hostname. If the hostname argument is not present, the entire cache will be emptied.
 	 */
 	clear(hostname?: string): void;
+  /**
+   * Clears underlying timers and the cache.
+   */
+  destroy(): void;
 }
