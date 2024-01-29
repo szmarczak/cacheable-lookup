@@ -76,6 +76,10 @@ const ignoreNoResultErrors = dnsPromise => {
 	});
 };
 
+const isProm = value => {
+	return Boolean(value && typeof value.then === 'function');
+}
+
 const ttl = {ttl: true};
 const all = {all: true};
 const all4 = {all: true, family: 4};
@@ -215,7 +219,13 @@ export default class CacheableLookup {
 
 	async query(hostname) {
 		let source = 'cache';
-		let cached = await this._cache.get(hostname);
+		let maybeProm = this._cache.get(hostname);
+
+		if( isProm( maybeProm ) ) {
+			maybeProm = await maybeProm;
+		}
+
+		let cached = maybeProm;
 
 		if (cached) {
 			this.stats.cache++;
