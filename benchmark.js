@@ -1,6 +1,6 @@
 import dns from 'node:dns';
 import Benchmark from 'benchmark';
-import CacheableLookup from './source/index.js';
+import CacheableLookup from './source/index.mjs';
 
 const cacheable = new CacheableLookup();
 const suite = new Benchmark.Suite();
