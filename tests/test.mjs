@@ -763,6 +763,34 @@ test('ttl works', async t => {
 	t.is(cacheable._cache.size, 0);
 });
 
+test.serial('long TTLs do not overflow cache removal timers', async t => {
+	const resolver = createResolver();
+	const ttl = 28 * 24 * 60 * 60;
+	resolver.data['127.0.0.1'].longTtl = [{address: '127.0.0.1', family: 4, ttl}];
+	const cacheable = new CacheableLookup({resolver});
+	const warnings = [];
+	const onWarning = warning => {
+		if (warning.name === 'TimeoutOverflowWarning') {
+			warnings.push(warning);
+		}
+	};
+
+	process.on('warning', onWarning);
+	t.teardown(() => {
+		process.removeListener('warning', onWarning);
+		clearTimeout(cacheable._removalTimeout);
+	});
+
+	const start = Date.now();
+	const entry = await cacheable.lookupAsync('longTtl');
+	await sleep(20);
+	t.is(warnings.length, 0);
+	t.is(entry.ttl, ttl);
+	t.true(entry.expires >= start + (ttl * 1000));
+	t.is((await cacheable.lookupAsync('longTtl')).source, 'cache');
+	t.deepEqual(resolver.counter, {4: 1, 6: 1, lookup: 0});
+});
+
 // eslint-disable-next-line ava/no-skip-test
 test.skip('custom cache support', async t => {
 	const cache = new Keyv();

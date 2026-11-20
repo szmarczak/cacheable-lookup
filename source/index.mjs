@@ -388,7 +388,7 @@ export default class CacheableLookup {
 				if (nextExpiry !== Infinity) {
 					this._tick(nextExpiry - now);
 				}
-			}, ms);
+			}, Math.min(ms, 2 ** 31 - 1));
 
 			/* istanbul ignore next: There is no `timeout.unref()` when running inside an Electron renderer */
 			if (this._removalTimeout.unref) {
