@@ -763,6 +763,25 @@ test('ttl works', async t => {
 	t.is(cacheable._cache.size, 0);
 });
 
+test('IP literals follow dns.lookup semantics without resolving', async t => {
+	const resolver = createResolver();
+	const cacheable = new CacheableLookup({resolver, lookup: false});
+	for (const hostname of ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'fe80::1%lo']) {
+		for (const options of [{}, {all: true}, {family: 4}, {family: 6}, {family: 6, hints: V4MAPPED}, {hints: ADDRCONFIG}]) {
+			const expected = await promisify(originalDns.lookup)(hostname, options);
+			const actual = await cacheable.lookupAsync(hostname, options);
+			if (options.all) {
+				t.deepEqual(actual, expected.map(entry => ({...entry, source: 'query'})));
+			} else {
+				t.deepEqual(actual, {...expected, source: 'query'});
+			}
+		}
+	}
+
+	t.deepEqual(resolver.counter, {4: 0, 6: 0, lookup: 0});
+	t.is(cacheable._cache.size, 0);
+});
+
 // eslint-disable-next-line ava/no-skip-test
 test.skip('custom cache support', async t => {
 	const cache = new Keyv();

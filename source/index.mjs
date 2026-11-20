@@ -7,6 +7,7 @@ import {
 } from 'node:dns';
 import {promisify} from 'node:util';
 import os from 'node:os';
+import {isIP} from 'node:net';
 
 const {Resolver: AsyncResolver} = dnsPromises;
 
@@ -173,6 +174,12 @@ export default class CacheableLookup {
 			options = {
 				family: options
 			};
+		}
+
+		const family = isIP(hostname);
+		if (family) {
+			const entry = {address: hostname, family, source: 'query'};
+			return options.all ? [entry] : entry;
 		}
 
 		let cached = await this.query(hostname);
