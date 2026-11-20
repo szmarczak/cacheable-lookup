@@ -361,12 +361,13 @@ export default class CacheableLookup {
 	}
 
 	_tick(ms) {
-		const nextRemovalTime = this._nextRemovalTime;
+		ms = Math.min(ms, 2 ** 31 - 1);
+		const nextRemovalTime = Date.now() + ms;
 
-		if (!nextRemovalTime || ms < nextRemovalTime) {
+		if (!this._nextRemovalTime || nextRemovalTime < this._nextRemovalTime) {
 			clearTimeout(this._removalTimeout);
 
-			this._nextRemovalTime = ms;
+			this._nextRemovalTime = nextRemovalTime;
 
 			this._removalTimeout = setTimeout(() => {
 				this._nextRemovalTime = false;
@@ -388,7 +389,7 @@ export default class CacheableLookup {
 				if (nextExpiry !== Infinity) {
 					this._tick(nextExpiry - now);
 				}
-			}, Math.min(ms, 2 ** 31 - 1));
+			}, ms);
 
 			/* istanbul ignore next: There is no `timeout.unref()` when running inside an Electron renderer */
 			if (this._removalTimeout.unref) {
