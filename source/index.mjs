@@ -361,12 +361,13 @@ export default class CacheableLookup {
 	}
 
 	_tick(ms) {
-		const nextRemovalTime = this._nextRemovalTime;
+		ms = Math.min(ms, 2 ** 31 - 1);
+		const nextRemovalTime = Date.now() + ms;
 
-		if (!nextRemovalTime || ms < nextRemovalTime) {
+		if (!this._nextRemovalTime || nextRemovalTime < this._nextRemovalTime) {
 			clearTimeout(this._removalTimeout);
 
-			this._nextRemovalTime = ms;
+			this._nextRemovalTime = nextRemovalTime;
 
 			this._removalTimeout = setTimeout(() => {
 				this._nextRemovalTime = false;

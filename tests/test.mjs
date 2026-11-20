@@ -763,6 +763,81 @@ test('ttl works', async t => {
 	t.is(cacheable._cache.size, 0);
 });
 
+test.serial('long TTLs do not overflow cache removal timers', async t => {
+	const resolver = createResolver();
+	const ttl = 28 * 24 * 60 * 60;
+	resolver.data['127.0.0.1'].longTtl = [{address: '127.0.0.1', family: 4, ttl}];
+	const cacheable = new CacheableLookup({resolver});
+	const warnings = [];
+	const onWarning = warning => {
+		if (warning.name === 'TimeoutOverflowWarning') {
+			warnings.push(warning);
+		}
+	};
+
+	process.on('warning', onWarning);
+	t.teardown(() => {
+		process.removeListener('warning', onWarning);
+		clearTimeout(cacheable._removalTimeout);
+	});
+
+	const start = Date.now();
+	const entry = await cacheable.lookupAsync('longTtl');
+	await sleep(20);
+	t.is(warnings.length, 0);
+	t.is(entry.ttl, ttl);
+	t.true(entry.expires >= start + (ttl * 1000));
+	t.is((await cacheable.lookupAsync('longTtl')).source, 'cache');
+	t.deepEqual(resolver.counter, {4: 1, 6: 1, lookup: 0});
+});
+
+test.serial('later entries do not postpone earlier cache expirations', async t => {
+	const originalNow = Date.now;
+	const originalSetTimeout = global.setTimeout;
+	const originalClearTimeout = global.clearTimeout;
+	const timers = new Set();
+	let now = originalNow();
+	Date.now = () => now;
+	global.setTimeout = (callback, delay) => {
+		const timer = {callback, time: now + delay, unref() {}};
+		timers.add(timer);
+		return timer;
+	};
+	global.clearTimeout = timer => timers.delete(timer);
+	t.teardown(() => {
+		Date.now = originalNow;
+		global.setTimeout = originalSetTimeout;
+		global.clearTimeout = originalClearTimeout;
+	});
+	const advance = duration => {
+		const target = now + duration;
+		let next;
+		while ((next = [...timers].sort((a, b) => a.time - b.time)[0]) && next.time <= target) {
+			timers.delete(next);
+			now = next.time;
+			next.callback();
+		}
+
+		now = target;
+	};
+
+	for (const longTtl of [true, false]) {
+		const resolver = createResolver();
+		const ttl = longTtl ? Math.ceil((2 ** 31) / 1000) : 10;
+		resolver.data['127.0.0.1'].first = [{address: '127.0.0.1', family: 4, ttl}];
+		resolver.data['127.0.0.1'].second = [{address: '127.0.0.1', family: 4, ttl: longTtl ? 10 : 5}];
+		const cacheable = new CacheableLookup({resolver, fallbackDuration: 0});
+		const first = await cacheable.lookupAsync('first');
+		advance(longTtl ? (2 ** 31) - 1001 : 8000);
+		await cacheable.lookupAsync('second');
+		advance(first.expires - now);
+		t.false(cacheable._cache.has('first'));
+		t.true(cacheable._cache.has('second'));
+		t.is((await cacheable.lookupAsync('second')).source, 'cache');
+		timers.clear();
+	}
+});
+
 // eslint-disable-next-line ava/no-skip-test
 test.skip('custom cache support', async t => {
 	const cache = new Keyv();
